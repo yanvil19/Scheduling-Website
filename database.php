@@ -1,5 +1,4 @@
 <?php
-// Test Run on terminal: & "C:\xampp\php\php.exe" "database.php"
 // Database connection
 try {
     $db = new SQLite3(__DIR__ . '/Database/courses.db');
@@ -14,18 +13,38 @@ function displayCourses($db) {
 
     echo "<h2>📘 Course List</h2>";
     echo "<table border='1' cellpadding='8'>";
-    echo "<tr><th>Code</th><th>Course Name</th><th>Section</th></tr>";
 
-    while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+    // Fetch the first row to get column names
+    $firstRow = $result->fetchArray(SQLITE3_ASSOC);
+    if ($firstRow) {
         echo "<tr>";
-        echo "<td>{$row['field1']}</td>";
-        echo "<td>{$row['field2']}</td>";
-        echo "<td>{$row['field8']}</td>";
+        foreach (array_keys($firstRow) as $column) {
+            echo "<th>{$column}</th>";
+        }
         echo "</tr>";
+
+        // Print the first row
+        echo "<tr>";
+        foreach ($firstRow as $value) {
+            echo "<td>{$value}</td>";
+        }
+        echo "</tr>";
+
+        // Print the rest of the rows
+        while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+            echo "<tr>";
+            foreach ($row as $value) {
+                echo "<td>{$value}</td>";
+            }
+            echo "</tr>";
+        }
+    } else {
+        echo "<tr><td colspan='5'>No courses found.</td></tr>";
     }
 
     echo "</table>";
 }
+
 
 
 ?>
