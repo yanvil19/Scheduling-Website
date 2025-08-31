@@ -1,4 +1,7 @@
 <?php
-    // First PHP code 
-    echo "Hello world";
+echo "Test 1...";
+
+require_once 'database.php';
+displayCourses($db);
+
 ?>
