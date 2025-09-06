@@ -2,7 +2,7 @@
 try {
     $db = new SQLite3(__DIR__ . '/Database/courses.db');
 
-    $results = $db->query("SELECT code, name FROM courses");
+    $results = $db->query("SELECT Code, Course_Title FROM coursesTable");
 
     echo "<h1>Available Courses</h1>";
     echo "<table border='1' cellpadding='5'>";
@@ -10,10 +10,11 @@ try {
 
     while ($row = $results->fetchArray(SQLITE3_ASSOC)) {
         echo "<tr>";
-        echo "<td>" . htmlspecialchars($row['code']) . "</td>";
-        echo "<td>" . htmlspecialchars($row['name']) . "</td>";
+        echo "<td>" . htmlspecialchars($row['Code']) . "</td>";
+        echo "<td>" . htmlspecialchars($row['Course_Title']) . "</td>";
         echo "</tr>";
     }
+
 
     echo "</table>";
 
