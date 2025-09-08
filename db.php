@@ -8,7 +8,7 @@ try {
 
 // Get courses by year and program (excluding GE = 'Y')
 function getCoursesByYearAndProgram($db, $year, $program) {
-    $stmt = $db->prepare("SELECT Code, Course_Title, Term 
+    $stmt = $db->prepare("SELECT Code, Course_Title, Term, Lec_Hrs, Lab_Hrs
                           FROM coursesTable 
                           WHERE Enrollee_Year = :year 
                             AND Program = :program
@@ -26,7 +26,7 @@ function getCoursesByYearAndProgram($db, $year, $program) {
 }
 
 function getRooms() {
-    
+
 
 }
 

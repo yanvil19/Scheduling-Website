@@ -90,10 +90,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                             <?php if (!empty($sec['courses'][$t])) : ?>
                                 <?php foreach ($sec['courses'][$t] as $courseRow) : ?>
                                     <tr>
-                                        <td><?php echo htmlspecialchars($courseRow['Code']); ?></td>
-                                        <td><?php echo htmlspecialchars($courseRow['Course_Title']); ?></td>
-                                        <td></td>
-                                        <td></td>
+                                    <td><?php echo htmlspecialchars($courseRow['Code']); ?></td>
+                                    <td><?php echo htmlspecialchars($courseRow['Course_Title']); ?></td>
+                                    <td><?php echo htmlspecialchars($courseRow['Lec_Hrs']); ?></td>
+                                    <td><?php echo htmlspecialchars($courseRow['Lab_Hrs']); ?></td>
                                     </tr>
                                 <?php endforeach; ?>
                             <?php else : ?>

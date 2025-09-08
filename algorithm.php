@@ -8,11 +8,10 @@ try {
 
 function greedyAlgo() {
 
-    
 }
 
 // Generate Schedule
-function getCoursesByYearAndProgram($db, $year, $program) {
+function getSchedule($db, $year, $program) {
     
 }
 ?>
