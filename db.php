@@ -2,7 +2,7 @@
 try {
     $db = new SQLite3(__DIR__ . '/Database/courses.db');
 
-    $results = $db->query("SELECT Code, Course_Title FROM coursesTable");
+    $results = $db->query("SELECT * FROM coursesTable");
 
     echo "<h1>Available Courses</h1>";
     echo "<table border='1' cellpadding='5'>";
