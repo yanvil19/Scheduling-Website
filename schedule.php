@@ -1,5 +1,5 @@
 <?php
-// schedule.php
+require_once "db.php"; // ✅ Include database + queries
 
 // Function to generate sections
 function generateSections($course, $year, $enrollees, $maxClassSize = 40) {
@@ -16,34 +16,47 @@ function generateSections($course, $year, $enrollees, $maxClassSize = 40) {
     return $sections;
 }
 
-// Only run when form is submitted
+$allData = [];
+
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $allData = [];
-
-    // Define courses and years
     $courses = ["it" => "BSIT", "is" => "BSIS", "cs" => "BSCS"];
-    $years = [
-        "firstyr" => "Year 1",
-        "secondyr" => "Year 2",
-        "thirdyr" => "Year 3",
-        "fourthyr" => "Year 4"
-    ];
+    $years = ["firstyr" => 1, "secondyr" => 2, "thirdyr" => 3, "fourthyr" => 4];
 
-    // Process each course per year
     foreach ($courses as $courseKey => $courseLabel) {
-        foreach ($years as $yearKey => $yearLabel) {
+        foreach ($years as $yearKey => $yearNumber) {
             $fieldName = "{$yearKey}_{$courseKey}_enrollees";
             if (isset($_POST[$fieldName])) {
                 $enrollees = (int) $_POST[$fieldName];
-                $sections = generateSections($courseLabel, $yearLabel, $enrollees);
+                $sections = generateSections($courseLabel, $yearNumber, $enrollees);
 
-                if (!isset($allData[$courseLabel])) {
-                    $allData[$courseLabel] = [];
+                if (!isset($allData[$courseLabel][$yearNumber])) {
+                    $allData[$courseLabel][$yearNumber] = [];
                 }
-                if (!isset($allData[$courseLabel][$yearLabel])) {
-                    $allData[$courseLabel][$yearLabel] = [];
+
+                // ✅ Get courses for this program & year from db.php
+                $coursesList = getCoursesByYearAndProgram($db, $yearNumber, $courseLabel);
+
+                // Group courses by term
+                $groupedByTerm = [
+                    1 => [],
+                    2 => [],
+                    3 => []
+                ];
+                foreach ($coursesList as $course) {
+                    $term = (int)$course['Term'];
+                    if (isset($groupedByTerm[$term])) {
+                        $groupedByTerm[$term][] = $course;
+                    }
                 }
-                $allData[$courseLabel][$yearLabel] = array_merge($allData[$courseLabel][$yearLabel], $sections);
+
+                foreach ($sections as &$sec) {
+                    $sec['courses'] = $groupedByTerm;
+                }
+
+                $allData[$courseLabel][$yearNumber] = array_merge(
+                    $allData[$courseLabel][$yearNumber],
+                    $sections
+                );
             }
         }
     }
@@ -60,21 +73,36 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     <?php if (!empty($allData)) : ?>
         <?php foreach ($allData as $course => $years) : ?>
-            <h2><?php echo $course; ?></h2>
+            <h2><?php echo htmlspecialchars($course); ?></h2>
             <?php foreach ($years as $year => $sections) : ?>
                 <?php foreach ($sections as $sec) : ?>
-                    <h3><?php echo $year . " - Section " . $sec['section']; ?>:</h3>
-                    <table border="1" cellpadding="5" cellspacing="0">
-                        <tr>
-                            <th>Code</th>
-                            <th>Course Name</th>
-                            <th>Room</th>
-                            <th>Time</th>
-                        </tr>
-                        <!-- Empty rows for now -->
-                         
-                    </table>
-                    <br>
+                    <h3><?php echo "Year " . htmlspecialchars($year) . " - Section " . htmlspecialchars($sec['section']); ?>:</h3>
+
+                    <?php for ($t = 1; $t <= 3; $t++) : ?>
+                        <h4>Term <?php echo $t; ?></h4>
+                        <table border="1" cellpadding="5" cellspacing="0">
+                            <tr>
+                                <th>Code</th>
+                                <th>Course Name</th>
+                                <th>Lec Hrs</th>
+                                <th>Lab Hrs</th>
+                            </tr>
+                            <?php if (!empty($sec['courses'][$t])) : ?>
+                                <?php foreach ($sec['courses'][$t] as $courseRow) : ?>
+                                    <tr>
+                                        <td><?php echo htmlspecialchars($courseRow['Code']); ?></td>
+                                        <td><?php echo htmlspecialchars($courseRow['Course_Title']); ?></td>
+                                        <td></td>
+                                        <td></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php else : ?>
+                                <tr><td colspan="4">No courses for Term <?php echo $t; ?></td></tr>
+                            <?php endif; ?>
+                        </table>
+                        <br>
+                    <?php endfor; ?>
+
                 <?php endforeach; ?>
             <?php endforeach; ?>
         <?php endforeach; ?>
