@@ -37,11 +37,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 $coursesList = getCoursesByYearAndProgram($db, $yearNumber, $courseLabel);
 
                 // Group courses by term
-                $groupedByTerm = [
-                    1 => [],
-                    2 => [],
-                    3 => []
-                ];
+                $groupedByTerm = [1 => [], 2 => [], 3 => []];
                 foreach ($coursesList as $course) {
                     $term = (int)$course['Term'];
                     if (isset($groupedByTerm[$term])) {
@@ -61,49 +57,147 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
     }
 }
-?>
 
+// =============================
+// Scheduling Algorithm Helpers
+// =============================
+function initGrid($rooms, $days, $times) {
+    $grid = [];
+    foreach ($rooms as $r) {
+        foreach ($days as $d) {
+            foreach ($times as $t) {
+                $grid[$r][$d][$t] = null;
+            }
+        }
+    }
+    return $grid;
+}
+function isRoomFree($grid, $room, $day, $time) {
+    return !isset($grid[$room][$day][$time]) || $grid[$room][$day][$time] === null;
+}
+function isSectionFree($sectionSchedule, $section, $day, $time) {
+    return !isset($sectionSchedule[$section][$day][$time]);
+}
+function reserveSlot(&$grid, $room, $day, $time, $assignment) {
+    $grid[$room][$day][$time] = $assignment;
+}
+function reserveSectionSlot(&$sectionSchedule, $section, $day, $time, $assignment) {
+    if (!isset($sectionSchedule[$section])) $sectionSchedule[$section] = [];
+    if (!isset($sectionSchedule[$section][$day])) $sectionSchedule[$section][$day] = [];
+    $sectionSchedule[$section][$day][$time] = $assignment;
+}
+?>
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Generated Sections</title>
+    <title>Generated Schedule</title>
+    <style>
+        table { border-collapse: collapse; width: 100%; margin-bottom:20px; }
+        th, td { padding: 6px 8px; border: 1px solid #ccc; text-align: left; }
+        th { background: #f2f2f2; }
+    </style>
 </head>
 <body>
-    <h1>Generated Class Sections</h1>
+    <a href="index.html">⬅ Back to Index</a>
+    <h1>Generated Schedule</h1>
 
     <?php if (!empty($allData)) : ?>
-        <?php foreach ($allData as $course => $years) : ?>
-            <h2><?php echo htmlspecialchars($course); ?></h2>
-            <?php foreach ($years as $year => $sections) : ?>
-                <?php foreach ($sections as $sec) : ?>
-                    <h3><?php echo "Year " . htmlspecialchars($year) . " - Section " . htmlspecialchars($sec['section']); ?>:</h3>
+        <?php
+        $lecture_rooms = ["Room 203", "Room 204"];
+        $lab_rooms = ["ComLab 1", "ComLab 5", "ComLab 6"];
+        $days = ["Mon","Tue","Wed","Thu","Fri","Sat"];
+        $time_blocks = [
+            "07:00-09:00","09:00-11:00","11:00-13:00",
+            "13:00-15:00","15:00-17:00","17:00-19:00","19:00-21:00"
+        ];
+        $lectureGrid = initGrid($lecture_rooms, $days, $time_blocks);
+        $labGrid = initGrid($lab_rooms, $days, $time_blocks);
+        $sectionSchedule = [];
+        $assignmentsBySection = [];
 
-                    <?php for ($t = 1; $t <= 3; $t++) : ?>
-                        <h4>Term <?php echo $t; ?></h4>
-                        <table border="1" cellpadding="5" cellspacing="0">
-                            <tr>
-                                <th>Code</th>
-                                <th>Course Name</th>
-                                <th>Lec Hrs</th>
-                                <th>Lab Hrs</th>
-                            </tr>
-                            <?php if (!empty($sec['courses'][$t])) : ?>
-                                <?php foreach ($sec['courses'][$t] as $courseRow) : ?>
-                                    <tr>
-                                    <td><?php echo htmlspecialchars($courseRow['Code']); ?></td>
-                                    <td><?php echo htmlspecialchars($courseRow['Course_Title']); ?></td>
-                                    <td><?php echo htmlspecialchars($courseRow['Lec_Hrs']); ?></td>
-                                    <td><?php echo htmlspecialchars($courseRow['Lab_Hrs']); ?></td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            <?php else : ?>
-                                <tr><td colspan="4">No courses for Term <?php echo $t; ?></td></tr>
-                            <?php endif; ?>
-                        </table>
-                        <br>
-                    <?php endfor; ?>
+        foreach ($allData as $program => $years) {
+            foreach ($years as $year => $sections) {
+                foreach ($sections as $sec) {
+                    $sectionName = $program . "-Y" . $year . "-S" . $sec['section'];
+                    for ($term = 1; $term <= 3; $term++) {
+                        foreach ($sec['courses'][$term] as $courseRow) {
+                            $lecHrs = (int) $courseRow['Lec_Hrs'];
+                            $labHrs = (int) $courseRow['Lab_Hrs'];
+                            $courseCode = $courseRow['Code'];
+                            $courseTitle = $courseRow['Course_Title'];
 
-                <?php endforeach; ?>
+                            // Lecture scheduling
+                            if ($lecHrs > 0) {
+                                $slotsNeeded = (int) ceil($lecHrs / 2);
+                                $slotsAssigned = 0;
+                                foreach ($days as $day) {
+                                    foreach ($time_blocks as $time) {
+                                        foreach ($lecture_rooms as $room) {
+                                            if ($slotsAssigned >= $slotsNeeded) break 3;
+                                            if (!isRoomFree($lectureGrid,$room,$day,$time)) continue;
+                                            if (!isSectionFree($sectionSchedule,$sectionName,$day,$time)) continue;
+                                            $a = [
+                                                'term'=>$term,'day'=>$day,'course_code'=>$courseCode,
+                                                'course_title'=>$courseTitle,'section'=>$sectionName,
+                                                'time'=>$time,'room'=>$room,'part'=>'Lec'
+                                            ];
+                                            reserveSlot($lectureGrid,$room,$day,$time,$a);
+                                            reserveSectionSlot($sectionSchedule,$sectionName,$day,$time,$a);
+                                            $assignmentsBySection[$sectionName][$term][]=$a;
+                                            $slotsAssigned++;
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Lab scheduling
+                            if ($labHrs > 0) {
+                                $slotsNeeded = (int) ceil($labHrs / 2);
+                                $slotsAssigned = 0;
+                                foreach ($days as $day) {
+                                    foreach ($time_blocks as $time) {
+                                        foreach ($lab_rooms as $room) {
+                                            if ($slotsAssigned >= $slotsNeeded) break 3;
+                                            if (!isRoomFree($labGrid,$room,$day,$time)) continue;
+                                            if (!isSectionFree($sectionSchedule,$sectionName,$day,$time)) continue;
+                                            $a = [
+                                                'term'=>$term,'day'=>$day,'course_code'=>$courseCode,
+                                                'course_title'=>$courseTitle,'section'=>$sectionName,
+                                                'time'=>$time,'room'=>$room,'part'=>'Lab'
+                                            ];
+                                            reserveSlot($labGrid,$room,$day,$time,$a);
+                                            reserveSectionSlot($sectionSchedule,$sectionName,$day,$time,$a);
+                                            $assignmentsBySection[$sectionName][$term][]=$a;
+                                            $slotsAssigned++;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        ?>
+
+        <?php foreach ($assignmentsBySection as $section => $terms): ?>
+            <h2>Schedule for <?php echo htmlspecialchars($section); ?></h2>
+            <?php foreach ($terms as $term => $assignments): ?>
+                <h3>Term <?php echo $term; ?></h3>
+                <table>
+                    <tr>
+                        <th>Day</th><th>Course</th><th>Time</th><th>Room</th><th>Part</th>
+                    </tr>
+                    <?php foreach ($assignments as $a): ?>
+                        <tr>
+                            <td><?php echo htmlspecialchars($a['day']); ?></td>
+                            <td><?php echo htmlspecialchars($a['course_code']." — ".$a['course_title']); ?></td>
+                            <td><?php echo htmlspecialchars($a['time']); ?></td>
+                            <td><?php echo htmlspecialchars($a['room']); ?></td>
+                            <td><?php echo htmlspecialchars($a['part']); ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                </table>
             <?php endforeach; ?>
         <?php endforeach; ?>
     <?php else : ?>
