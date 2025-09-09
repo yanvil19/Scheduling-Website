@@ -6,11 +6,6 @@
 <body>
     <h1>Automated Scheduling System</h1>
 
-    <!-- Check Rooms -->
-    <form action="db.php" method="POST">
-        <button type="submit">Check Rooms</button>
-    </form>
-
     <!-- Generate Sections + Schedule -->
     <form method="POST" action="schedule.php">
         <h2>Enter Number of Enrollees:</h2>
@@ -66,17 +61,5 @@
     
     <hr>
     
-    <h2>System Constraints:</h2>
-    <ul>
-        <li>40 students maximum per section</li>
-        <li>Days: Monday-Saturday (7AM-9PM)</li>
-        <li>Time slots: 7-9am, 9-11am, 11-1pm (lunch), 1-3pm, 3-5pm, 5-7pm, 7-9pm</li>
-        <li>Partner days: MTH, TF, WS</li>
-        <li>Lecture rooms: 203, 204</li>
-        <li>Lab rooms: CompLab 1, CompLab 5, CompLab 6</li>
-        <li>Lecture: 2.67 hours/week</li>
-        <li>Lab: 4 hours/week</li>
-        <li>Avoid lunch time (11AM-1PM) when possible</li>
-    </ul>
 </body>
 </html>
