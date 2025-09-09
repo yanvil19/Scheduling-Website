@@ -5,22 +5,10 @@ require_once "db.php"; // Include database connection and query functions
  * SECTION GENERATION FUNCTION
  * Calculates how many sections are needed based on enrollees
  */
-
-/**
- * Generate sections for a given course/year based on enrollment
- * 
- * @param string $course - Course program (BSIT, BSIS, BSCS)
- * @param int $year - Year level (1-4)
- * @param int $enrollees - Number of enrolled students
- * @param int $maxClassSize - Maximum students per section (default: 40)
- * @return array - Array of section information
- */
 function generateSections($course, $year, $enrollees, $maxClassSize = 40) {
     $sections = [];
-    // Calculate number of sections needed (round up)
     $sectionCount = ceil($enrollees / $maxClassSize);
 
-    // Create section records
     for ($i = 1; $i <= $sectionCount; $i++) {
         $sections[] = [
             'year' => $year,
@@ -31,75 +19,7 @@ function generateSections($course, $year, $enrollees, $maxClassSize = 40) {
     return $sections;
 }
 
-// Initialize data storage array
-$allData = [];
-
-// ================================================================
-// FORM DATA PROCESSING
-// Process POST data to generate sections and assign courses
-// ================================================================
-
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    // Program mapping: form field prefix => program name
-    $courses = ["it" => "BSIT", "is" => "BSIS", "cs" => "BSCS"];
-    // Year mapping: form field prefix => year number
-    $years = ["firstyr" => 1, "secondyr" => 2, "thirdyr" => 3, "fourthyr" => 4];
-
-    // Process each program
-    foreach ($courses as $courseKey => $courseLabel) {
-        // Process each year level
-        foreach ($years as $yearKey => $yearNumber) {
-            // Build field name (e.g., "firstyr_it_enrollees")
-            $fieldName = "{$yearKey}_{$courseKey}_enrollees";
-            
-            // Check if this field was submitted
-            if (isset($_POST[$fieldName])) {
-                $enrollees = (int) $_POST[$fieldName];
-                
-                // Generate sections for this program/year
-                $sections = generateSections($courseLabel, $yearNumber, $enrollees);
-
-                // Initialize data structure if needed
-                if (!isset($allData[$courseLabel][$yearNumber])) {
-                    $allData[$courseLabel][$yearNumber] = [];
-                }
-
-                // Get all courses for this program & year from database
-                $coursesList = getCoursesByYearAndProgram($db, $yearNumber, $courseLabel);
-
-                // Group courses by term (1st, 2nd, 3rd semester)
-                $groupedByTerm = [1 => [], 2 => [], 3 => []];
-                foreach ($coursesList as $course) {
-                    $term = (int)$course['Term'];
-                    if (isset($groupedByTerm[$term])) {
-                        $groupedByTerm[$term][] = $course;
-                    }
-                }
-
-                // Assign courses to each section
-                foreach ($sections as &$sec) {
-                    $sec['courses'] = $groupedByTerm;
-                }
-
-                // Add sections to the main data array
-                $allData[$courseLabel][$yearNumber] = array_merge(
-                    $allData[$courseLabel][$yearNumber],
-                    $sections
-                );
-            }
-        }
-    }
-}
-
-// =============================
 // SCHEDULING ALGORITHM HELPER FUNCTIONS
-// Same functions as in algorithm.php for consistency
-// =============================
-
-/**
- * Initialize a 3D grid for room scheduling
- * Creates structure: [room][day][time] = null
- */
 function initGrid($rooms, $days, $times) {
     $grid = [];
     foreach ($rooms as $r) {
@@ -112,34 +32,95 @@ function initGrid($rooms, $days, $times) {
     return $grid;
 }
 
-/**
- * Check if a room slot is available
- */
 function isRoomFree($grid, $room, $day, $time) {
     return !isset($grid[$room][$day][$time]) || $grid[$room][$day][$time] === null;
 }
 
-/**
- * Check if a section is free at given time (no conflicts)
- */
 function isSectionFree($sectionSchedule, $section, $day, $time) {
     return !isset($sectionSchedule[$section][$day][$time]);
 }
 
-/**
- * Reserve a room slot
- */
 function reserveSlot(&$grid, $room, $day, $time, $assignment) {
     $grid[$room][$day][$time] = $assignment;
 }
 
-/**
- * Reserve a section's time slot
- */
 function reserveSectionSlot(&$sectionSchedule, $section, $day, $time, $assignment) {
     if (!isset($sectionSchedule[$section])) $sectionSchedule[$section] = [];
     if (!isset($sectionSchedule[$section][$day])) $sectionSchedule[$section][$day] = [];
     $sectionSchedule[$section][$day][$time] = $assignment;
+}
+
+// Initialize data storage array
+$allData = [];
+$debugInfo = []; // ADD: Debug information array
+
+// FORM DATA PROCESSING
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $courses = ["it" => "BSIT", "is" => "BSIS", "cs" => "BSCS"];
+    $years = ["firstyr" => 1, "secondyr" => 2, "thirdyr" => 3, "fourthyr" => 4];
+
+    // ADD: Debug POST data
+    $debugInfo['post_data'] = $_POST;
+    
+    foreach ($courses as $courseKey => $courseLabel) {
+        foreach ($years as $yearKey => $yearNumber) {
+            $fieldName = "{$yearKey}_{$courseKey}_enrollees";
+            
+            // ADD: Debug field processing
+            $debugInfo['processed_fields'][] = [
+                'field_name' => $fieldName,
+                'exists' => isset($_POST[$fieldName]),
+                'value' => isset($_POST[$fieldName]) ? $_POST[$fieldName] : 'NOT SET'
+            ];
+            
+            if (isset($_POST[$fieldName]) && $_POST[$fieldName] > 0) { // ADD: Check for > 0
+                $enrollees = (int) $_POST[$fieldName];
+                $sections = generateSections($courseLabel, $yearNumber, $enrollees);
+
+                if (!isset($allData[$courseLabel][$yearNumber])) {
+                    $allData[$courseLabel][$yearNumber] = [];
+                }
+
+                // Get courses from database
+                $coursesList = getCoursesByYearAndProgram($db, $yearNumber, $courseLabel);
+                
+                // ADD: Debug database results
+                $debugInfo['database_queries'][] = [
+                    'program' => $courseLabel,
+                    'year' => $yearNumber,
+                    'courses_found' => count($coursesList),
+                    'courses' => $coursesList
+                ];
+
+                // Group courses by term - FIX: Ensure all terms are initialized
+                $groupedByTerm = [1 => [], 2 => [], 3 => []];
+                foreach ($coursesList as $course) {
+                    $term = (int)$course['Term'];
+                    if ($term >= 1 && $term <= 3) { // ADD: Validate term range
+                        $groupedByTerm[$term][] = $course;
+                    }
+                }
+                
+                // ADD: Debug term grouping
+                $debugInfo['term_grouping'][] = [
+                    'program' => $courseLabel,
+                    'year' => $yearNumber,
+                    'term_1_courses' => count($groupedByTerm[1]),
+                    'term_2_courses' => count($groupedByTerm[2]),
+                    'term_3_courses' => count($groupedByTerm[3])
+                ];
+
+                foreach ($sections as &$sec) {
+                    $sec['courses'] = $groupedByTerm;
+                }
+
+                $allData[$courseLabel][$yearNumber] = array_merge(
+                    $allData[$courseLabel][$yearNumber],
+                    $sections
+                );
+            }
+        }
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -150,76 +131,113 @@ function reserveSectionSlot(&$sectionSchedule, $section, $day, $time, $assignmen
         table { border-collapse: collapse; width: 100%; margin-bottom:20px; }
         th, td { padding: 6px 8px; border: 1px solid #ccc; text-align: left; }
         th { background: #f2f2f2; }
+        .debug { background: #fff3cd; padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .error { background: #f8d7da; padding: 10px; margin: 10px 0; border-radius: 5px; }
     </style>
 </head>
 <body>
     <a href="index.html">← Back to Index</a>
     <h1>Generated Schedule</h1>
 
+    <!-- ADD: Debug Information Section -->
+    <?php if (!empty($debugInfo)): ?>
+    <div class="debug">
+        <h3>🔍 Debug Information</h3>
+        
+        <h4>Form Fields Processed:</h4>
+        <table style="font-size: 12px;">
+            <tr><th>Field Name</th><th>Exists</th><th>Value</th></tr>
+            <?php foreach ($debugInfo['processed_fields'] as $field): ?>
+            <tr>
+                <td><?= $field['field_name'] ?></td>
+                <td><?= $field['exists'] ? '✅' : '❌' ?></td>
+                <td><?= $field['value'] ?></td>
+            </tr>
+            <?php endforeach; ?>
+        </table>
+
+        <?php if (isset($debugInfo['database_queries'])): ?>
+        <h4>Database Queries:</h4>
+        <?php foreach ($debugInfo['database_queries'] as $query): ?>
+            <p><strong><?= $query['program'] ?> Year <?= $query['year'] ?>:</strong> 
+               Found <?= $query['courses_found'] ?> courses</p>
+        <?php endforeach; ?>
+        <?php endif; ?>
+
+        <?php if (isset($debugInfo['term_grouping'])): ?>
+        <h4>Courses by Term:</h4>
+        <?php foreach ($debugInfo['term_grouping'] as $group): ?>
+            <p><strong><?= $group['program'] ?> Year <?= $group['year'] ?>:</strong> 
+               Term 1: <?= $group['term_1_courses'] ?>, 
+               Term 2: <?= $group['term_2_courses'] ?>, 
+               Term 3: <?= $group['term_3_courses'] ?></p>
+        <?php endforeach; ?>
+        <?php endif; ?>
+    </div>
+    <?php endif; ?>
+
     <?php if (!empty($allData)) : ?>
         <?php
-        // ================================================================
         // SCHEDULING CONFIGURATION
-        // Define available resources and constraints
-        // ================================================================
-        
-        $lecture_rooms = ["Room 203", "Room 204"];                    // Available lecture rooms
-        $lab_rooms = ["ComLab 1", "ComLab 5", "ComLab 6"];          // Available laboratory rooms
-        $days = ["Mon","Tue","Wed","Thu","Fri","Sat"];               // Days of the week
-        $time_blocks = [                                              // Time slots (2-hour blocks)
+        $lecture_rooms = ["Room 203", "Room 204"];
+        $lab_rooms = ["ComLab 1", "ComLab 5", "ComLab 6"];
+        $days = ["Mon","Tue","Wed","Thu","Fri","Sat"];
+        $time_blocks = [
             "07:00-09:00","09:00-11:00","11:00-13:00",
             "13:00-15:00","15:00-17:00","17:00-19:00","19:00-21:00"
         ];
         
-        // Initialize scheduling grids and tracking arrays
-        $lectureGrid = initGrid($lecture_rooms, $days, $time_blocks);  // Track lecture room usage
-        $labGrid = initGrid($lab_rooms, $days, $time_blocks);         // Track lab room usage
-        $sectionSchedule = [];                                         // Track each section's schedule
-        $assignmentsBySection = [];                                    // Group assignments by section
+        $lectureGrid = initGrid($lecture_rooms, $days, $time_blocks);
+        $labGrid = initGrid($lab_rooms, $days, $time_blocks);
+        $sectionSchedule = [];
+        $assignmentsBySection = [];
+        $schedulingDebug = []; // ADD: Scheduling debug info
 
-        // ================================================================
         // MAIN SCHEDULING LOOP
-        // Process all programs, years, and sections
-        // ================================================================
-        
         foreach ($allData as $program => $years) {
+            $schedulingDebug[] = "Processing program: $program";
+            
             foreach ($years as $year => $sections) {
+                $schedulingDebug[] = "  Processing year: $year (" . count($sections) . " sections)";
+                
                 foreach ($sections as $sec) {
-                    // Generate section name (e.g., "BSIT-Y1-S1")
                     $sectionName = $program . "-Y" . $year . "-S" . $sec['section'];
+                    $schedulingDebug[] = "    Processing section: $sectionName";
                     
-                    // Process each term (semester)
+                    // Process each term
                     for ($term = 1; $term <= 3; $term++) {
-                        // Process each course in the current term
+                        $schedulingDebug[] = "      Processing term: $term";
+                        
+                        // FIX: Check if courses exist for this term
+                        if (!isset($sec['courses'][$term]) || empty($sec['courses'][$term])) {
+                            $schedulingDebug[] = "        ⚠️ No courses found for term $term";
+                            continue;
+                        }
+                        
+                        $coursesInTerm = count($sec['courses'][$term]);
+                        $schedulingDebug[] = "        Found $coursesInTerm courses in term $term";
+                        
                         foreach ($sec['courses'][$term] as $courseRow) {
-                            $lecHrs = (int) $courseRow['Lec_Hrs'];      // Lecture hours per week
-                            $labHrs = (int) $courseRow['Lab_Hrs'];      // Lab hours per week
-                            $courseCode = $courseRow['Code'];           // Course code
-                            $courseTitle = $courseRow['Course_Title'];  // Course title
+                            $lecHrs = (int) $courseRow['Lec_Hrs'];
+                            $labHrs = (int) $courseRow['Lab_Hrs'];
+                            $courseCode = $courseRow['Code'];
+                            $courseTitle = $courseRow['Course_Title'];
+                            
+                            $schedulingDebug[] = "          Processing course: $courseCode ($lecHrs lec, $labHrs lab hours)";
 
-                            // ================================
                             // LECTURE SCHEDULING
-                            // Assign lecture time slots
-                            // ================================
                             if ($lecHrs > 0) {
-                                // Calculate number of 2-hour slots needed
                                 $slotsNeeded = (int) ceil($lecHrs / 2);
                                 $slotsAssigned = 0;
                                 
-                                // Try to assign slots (priority: day -> time -> room)
                                 foreach ($days as $day) {
                                     foreach ($time_blocks as $time) {
                                         foreach ($lecture_rooms as $room) {
-                                            // Stop when enough slots are assigned
                                             if ($slotsAssigned >= $slotsNeeded) break 3;
                                             
-                                            // Check room availability
                                             if (!isRoomFree($lectureGrid,$room,$day,$time)) continue;
-                                            
-                                            // Check section availability (no conflicts)
                                             if (!isSectionFree($sectionSchedule,$sectionName,$day,$time)) continue;
                                             
-                                            // Create assignment record
                                             $a = [
                                                 'term' => $term,
                                                 'day' => $day,
@@ -231,41 +249,38 @@ function reserveSectionSlot(&$sectionSchedule, $section, $day, $time, $assignmen
                                                 'part' => 'Lec'
                                             ];
                                             
-                                            // Reserve slots in both tracking systems
                                             reserveSlot($lectureGrid,$room,$day,$time,$a);
                                             reserveSectionSlot($sectionSchedule,$sectionName,$day,$time,$a);
                                             
-                                            // Store assignment grouped by section
+                                            // FIX: Initialize arrays properly
+                                            if (!isset($assignmentsBySection[$sectionName])) {
+                                                $assignmentsBySection[$sectionName] = [];
+                                            }
+                                            if (!isset($assignmentsBySection[$sectionName][$term])) {
+                                                $assignmentsBySection[$sectionName][$term] = [];
+                                            }
+                                            
                                             $assignmentsBySection[$sectionName][$term][] = $a;
                                             $slotsAssigned++;
                                         }
                                     }
                                 }
+                                $schedulingDebug[] = "            Assigned $slotsAssigned/$slotsNeeded lecture slots";
                             }
 
-                            // ================================
-                            // LABORATORY SCHEDULING
-                            // Assign lab time slots
-                            // ================================
+                            // LAB SCHEDULING
                             if ($labHrs > 0) {
-                                // Calculate number of 2-hour slots needed
                                 $slotsNeeded = (int) ceil($labHrs / 2);
                                 $slotsAssigned = 0;
                                 
-                                // Try to assign slots (priority: day -> time -> room)
                                 foreach ($days as $day) {
                                     foreach ($time_blocks as $time) {
                                         foreach ($lab_rooms as $room) {
-                                            // Stop when enough slots are assigned
                                             if ($slotsAssigned >= $slotsNeeded) break 3;
                                             
-                                            // Check room availability
                                             if (!isRoomFree($labGrid,$room,$day,$time)) continue;
-                                            
-                                            // Check section availability (no conflicts)
                                             if (!isSectionFree($sectionSchedule,$sectionName,$day,$time)) continue;
                                             
-                                            // Create assignment record
                                             $a = [
                                                 'term' => $term,
                                                 'day' => $day,
@@ -277,16 +292,24 @@ function reserveSectionSlot(&$sectionSchedule, $section, $day, $time, $assignmen
                                                 'part' => 'Lab'
                                             ];
                                             
-                                            // Reserve slots in both tracking systems
                                             reserveSlot($labGrid,$room,$day,$time,$a);
                                             reserveSectionSlot($sectionSchedule,$sectionName,$day,$time,$a);
                                             
-                                            // Store assignment grouped by section
+                                            // FIX: Initialize arrays properly
+                                            if (!isset($assignmentsBySection[$sectionName])) {
+                                                $assignmentsBySection[$sectionName] = [];
+                                            }
+                                            if (!isset($assignmentsBySection[$sectionName][$term])) {
+                                                $assignmentsBySection[$sectionName][$term] = [];
+                                            }
+                                            
+                                            $assignmentsBySection[$sectionName][$term] = $assignmentsBySection[$sectionName][$term] ?? [];
                                             $assignmentsBySection[$sectionName][$term][] = $a;
                                             $slotsAssigned++;
                                         }
                                     }
                                 }
+                                $schedulingDebug[] = "            Assigned $slotsAssigned/$slotsNeeded lab slots";
                             }
                         }
                     }
@@ -295,17 +318,40 @@ function reserveSectionSlot(&$sectionSchedule, $section, $day, $time, $assignmen
         }
         ?>
 
-        <?php 
-        // ================================================================
-        // DISPLAY RESULTS
-        // Show schedules organized by section and term
-        // ================================================================
-        ?>
+        <!-- ADD: Scheduling Debug Info -->
+        <div class="debug">
+            <h3>📅 Scheduling Debug</h3>
+            <textarea style="width: 100%; height: 200px; font-family: monospace; font-size: 11px;"><?php 
+                foreach ($schedulingDebug as $log) {
+                    echo $log . "\n";
+                }
+            ?></textarea>
+        </div>
+
+        <!-- DISPLAY RESULTS -->
+        <?php if (empty($assignmentsBySection)): ?>
+            <div class="error">
+                <h3>❌ No Schedules Generated</h3>
+                <p>Possible issues:</p>
+                <ul>
+                    <li>No enrollees entered (must be > 0)</li>
+                    <li>No courses found in database for selected programs/years</li>
+                    <li>Database connection issues</li>
+                    <li>Course data missing Term information</li>
+                </ul>
+            </div>
+        <?php else: ?>
+            <p><strong>✅ Generated schedules for <?= count($assignmentsBySection) ?> sections</strong></p>
+        <?php endif; ?>
         
         <?php foreach ($assignmentsBySection as $section => $terms): ?>
             <h2>Schedule for <?php echo htmlspecialchars($section); ?></h2>
-            <?php foreach ($terms as $term => $assignments): ?>
-                <h3>Term <?php echo $term; ?></h3>
+            <?php 
+            // Sort terms to display in order
+            ksort($terms);
+            foreach ($terms as $term => $assignments): 
+            ?>
+                <h3>Term <?php echo $term; ?> (<?= count($assignments) ?> classes)</h3>
                 <table>
                     <tr>
                         <th>Day</th><th>Course</th><th>Time</th><th>Room</th><th>Part</th>
@@ -323,7 +369,11 @@ function reserveSectionSlot(&$sectionSchedule, $section, $day, $time, $assignmen
             <?php endforeach; ?>
         <?php endforeach; ?>
     <?php else : ?>
-        <p>No data submitted. Please go back and enter enrollees.</p>
+        <div class="error">
+            <h3>❌ No Data Submitted</h3>
+            <p>Please go back and enter the number of enrollees for each program/year.</p>
+            <p><strong>Make sure to enter values greater than 0.</strong></p>
+        </div>
     <?php endif; ?>
 </body>
 </html>
