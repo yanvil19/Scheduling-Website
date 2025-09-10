@@ -6,57 +6,42 @@
 <body>
     <h1>Automated Scheduling System</h1>
 
-    <!-- Generate Sections + Schedule -->
-    <form method="POST" action="schedule.php">
+    <form method="POST" action="controllers/ScheduleController.php">
         <h2>Enter Number of Enrollees:</h2>
-        
-        <!-- Input first year enrollees -->
+
         <h3>First Year</h3>
         <label>IT Enrollees: </label>
         <input type="number" name="firstyr_it_enrollees" value="40" min="1" max="400" required><br><br>
-        
         <label>IS Enrollees: </label>
         <input type="number" name="firstyr_is_enrollees" value="40" min="1" max="400" required><br><br>
-        
         <label>CS Enrollees: </label>
         <input type="number" name="firstyr_cs_enrollees" value="40" min="1" max="400" required><br><br>
-        
-        <!-- Input second year enrollees -->
+
         <h3>Second Year</h3>
         <label>IT Enrollees: </label>
         <input type="number" name="secondyr_it_enrollees" value="40" min="1" max="400" required><br><br>
-        
         <label>IS Enrollees: </label>
         <input type="number" name="secondyr_is_enrollees" value="40" min="1" max="400" required><br><br>
-        
         <label>CS Enrollees: </label>
         <input type="number" name="secondyr_cs_enrollees" value="40" min="1" max="400" required><br><br>
-                
-        <!-- Input third year enrollees -->
+
         <h3>Third Year</h3>
         <label>IT Enrollees: </label>
         <input type="number" name="thirdyr_it_enrollees" value="40" min="1" max="400" required><br><br>
-        
         <label>IS Enrollees: </label>
         <input type="number" name="thirdyr_is_enrollees" value="40" min="1" max="400" required><br><br>
-        
         <label>CS Enrollees: </label>
         <input type="number" name="thirdyr_cs_enrollees" value="40" min="1" max="400" required><br><br>
-        
-        <!-- Input fourth year enrollees -->
+
         <h3>Fourth Year</h3>
         <label>IT Enrollees: </label>
         <input type="number" name="fourthyr_it_enrollees" value="40" min="1" max="400" required><br><br>
-        
         <label>IS Enrollees: </label>
         <input type="number" name="fourthyr_is_enrollees" value="40" min="1" max="400" required><br><br>
-        
         <label>CS Enrollees: </label>
         <input type="number" name="fourthyr_cs_enrollees" value="40" min="1" max="400" required><br><br>
-                
-        <!-- Generate Schedule button -->
-        <button type="submit" formaction="schedule.php">Generate Sections + Schedule</button>
-    </form>
 
+        <button type="submit">Generate Sections + Schedule</button>
+    </form>
 </body>
 </html>
