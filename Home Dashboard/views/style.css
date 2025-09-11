@@ -17,15 +17,29 @@
   width: 20rem;
   height: 100vh;
   z-index: 1000;
+
+  /* Main dark blue background matching SVG */
+  background-color: #020D2C;
+
+  /* Curved right side edges */
+  border-top-right-radius: 55px;
+  border-bottom-right-radius: 55px;
+
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .navbar-bg {
+  /* Disable or remove background if conflicting */
+  background: transparent;
   position: absolute;
   width: 100%;
   height: 100%;
   left: 0;
   top: 0;
   z-index: 1;
+  
 }
 
 .navbar-logo {
@@ -35,6 +49,14 @@
   display: flex;
   align-items: flex-start;
   gap: 1rem;
+
+  /* Bright blue header background */
+  background-color: #045AE8;
+
+  /* Rounded top-right corner matching container */
+  border-top-right-radius: 55px;
+  border-bottom-right-radius: 55px;
+  
 }
 
 .logo-icon {
@@ -43,6 +65,8 @@
   flex-shrink: 0;
   object-fit: cover;
   aspect-ratio: 62.09/62.07;
+  
+  /* border: 1px solid red; */
 }
 
 .logo-text-content {
@@ -51,6 +75,8 @@
   justify-content: center;
   gap: 0.25rem;
   min-height: 3.879rem;
+  
+  /* border: 1px solid red; */
 }
 
 .sigma-scheds {
@@ -62,6 +88,7 @@
   line-height: 1.2;
   margin: 0;
   display: block;
+  
 }
 
 .sigma-scheds-subtext {
@@ -79,6 +106,8 @@
   position: relative;
   padding-top: 2rem;
   z-index: 3;
+  
+  /* border: 1px solid red; */
 }
 
 .nav-item {
@@ -89,10 +118,12 @@
   cursor: pointer;
   transition: all 0.3s ease;
   position: relative;
+  
+  /* border: 1px solid red; */
 }
 
 .nav-item:hover {
-  background:  rgb(1, 70, 199);
+  background: rgb(1, 70, 199);
   border-top-right-radius: 10rem;
   border-bottom-right-radius: 10rem;
 }
@@ -103,6 +134,8 @@
   position: relative;
   right: 2rem;
   flex-shrink: 0;
+  /*  */
+  /* border: 1px solid red; */
 }
 
 .nav-text {
@@ -111,6 +144,8 @@
   font-size: 1.25rem;
   letter-spacing: var(--header-2-letter-spacing);
   font-weight: var(--header-2-font-weight);
+  
+  /* border: 1px solid red; */
 }
 
 .navbar-container[data-active="home"] .navbar-highlighter {
@@ -132,6 +167,7 @@
 .navbar-container[data-active="schedule"] .navbar-highlighter {
   top: 25.375rem;
 }
+
 
 .feature-section {
   display: grid;
@@ -481,12 +517,34 @@
   top: 0;
 }
 
-.stats-file {
-  width: 22.563rem;
-  height: 60.2vh;
-  position: absolute;
-  left: 71.313rem;
-  top: 36.92vh;
+.holder {
+  background: #d1def1;       /* Light blue */
+  width: 40vw;               /* Adjust width */
+  height: 62vh;              /* Adjust height */
+  border-radius: 1rem;       /* Rounded corners */
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  justify-content: right;
+  
+  left: 60%;
+}
+
+.stats-file-box {
+  top: 0;
+  width: 25%;                /* Width of tab relative to the container */
+  height: 12%;               /* Height of tab */
+  background: #d1def1;       /* Same background color */
+  border-top-right-radius: 1rem;
+  border-bottom-left-radius: 1rem;
+
+  /* Shape the tab with clip-path to create angled bottom-left edge */
+  clip-path: polygon(
+    0% 0%, 
+    100% 0%, 
+    100% 100%, 
+    15% 100%
+  );
 }
 
 .stats {
