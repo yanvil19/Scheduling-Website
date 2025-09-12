@@ -5,14 +5,17 @@ public class Main {
         System.out.println("🚀 Starting Program...");
 
         Display display = new Display();
+        Enrollment enroll = new Enrollment();
         Algorithm algo = new Algorithm();
         Scanner scanner = new Scanner(System.in);
+
         int choice;
 
         do {
             System.out.println("\n===== MENU =====");
             System.out.println("1. Display all courses");
-            System.out.println("2. Run scheduling algorithm (placeholder)");
+            System.out.println("2. Get number of Enrollees");
+            System.out.println("3. Run scheduling algorithm (placeholder)");
             System.out.println("0. Exit");
             System.out.print("Enter your choice: ");
 
@@ -23,6 +26,9 @@ public class Main {
                     display.displayAllCourses();
                     break;
                 case 2:
+                    enroll.handleEnrollment();
+                    break;
+                case 3:
                     algo.runScheduling();
                     break;
                 case 0:
