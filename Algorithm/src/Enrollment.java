@@ -33,7 +33,7 @@ public class Enrollment {
                     try (PreparedStatement stmt = conn.prepareStatement(
                             "INSERT INTO enrolleesTable (program, yearLevel, enrollees) VALUES (?, ?, ?)")) {
                         stmt.setString(1, program);
-                        stmt.setString(2, YEARS[year]);
+                        stmt.setInt(2, year + 1);
                         stmt.setInt(3, enrollees);
                         stmt.executeUpdate();
                     }

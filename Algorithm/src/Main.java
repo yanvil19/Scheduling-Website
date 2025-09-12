@@ -29,7 +29,7 @@ public class Main {
                     enroll.handleEnrollment();
                     break;
                 case 3:
-                    algo.runScheduling();
+//                    algo.runScheduler();
                     break;
                 case 0:
                     System.out.println("👋 Exiting...");
