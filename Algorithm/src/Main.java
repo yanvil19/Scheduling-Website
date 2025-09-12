@@ -13,8 +13,6 @@ public class Main {
             System.out.println("\n===== MENU =====");
             System.out.println("1. Display all courses");
             System.out.println("2. Run scheduling algorithm (placeholder)");
-            System.out.println("3. Check conflicts (placeholder)");
-            System.out.println("4. Assign rooms (placeholder)");
             System.out.println("0. Exit");
             System.out.print("Enter your choice: ");
 
@@ -26,12 +24,6 @@ public class Main {
                     break;
                 case 2:
                     algo.runScheduling();
-                    break;
-                case 3:
-                    algo.checkConflicts();
-                    break;
-                case 4:
-                    algo.assignRooms();
                     break;
                 case 0:
                     System.out.println("👋 Exiting...");
