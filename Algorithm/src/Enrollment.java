@@ -19,9 +19,14 @@ public class Enrollment {
             }
 
             // Clear old records
-            conn.createStatement().execute("TRUNCATE TABLE enrolleesTable");
+            conn.createStatement().execute("TRUNCATE TABLE programyearcounts");
 
-            for (String program : PROGRAMS) {
+            int countId = 1; // Counter for CountID
+
+            for (int programIndex = 0; programIndex < PROGRAMS.length; programIndex++) {
+                String program = PROGRAMS[programIndex];
+                int programId = programIndex + 1; // Assuming ProgramID starts from 1
+
                 System.out.println("\n*** " + program + " ***");
 
                 // Collect inputs (store raw data only)
@@ -29,18 +34,19 @@ public class Enrollment {
                     System.out.print("Input " + program + " " + YEARS[year] + " enrollees: ");
                     int enrollees = scanner.nextInt();
 
-                    // Save directly into table
+                    // Save directly into programyearcounts table
                     try (PreparedStatement stmt = conn.prepareStatement(
-                            "INSERT INTO enrolleesTable (program, yearLevel, enrollees) VALUES (?, ?, ?)")) {
-                        stmt.setString(1, program);
-                        stmt.setInt(2, year + 1);
-                        stmt.setInt(3, enrollees);
+                            "INSERT INTO programyearcounts (CountID, ProgramID, YearLevelID, StudentCount) VALUES (?, ?, ?, ?)")) {
+                        stmt.setInt(1, countId++);
+                        stmt.setInt(2, programId);
+                        stmt.setInt(3, year + 1); // YearLevelID (1-4)
+                        stmt.setInt(4, enrollees);
                         stmt.executeUpdate();
                     }
                 }
             }
 
-            System.out.println("\n✅ Enrollee data saved to enrolleesTable!");
+            System.out.println("\n✅ Enrollee data saved to programyearcounts table!");
 
         } catch (SQLException e) {
             e.printStackTrace();

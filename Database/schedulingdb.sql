@@ -1,161 +1,376 @@
-CREATE DATABASE schedulingdb;
+-- phpMyAdmin SQL Dump
+-- version 5.2.1
+-- https://www.phpmyadmin.net/
+--
+-- Host: localhost:3307
+-- Generation Time: Sep 12, 2025 at 09:48 PM
+-- Server version: 10.4.32-MariaDB
+-- PHP Version: 8.2.12
 
-USE schedulingdb;
--- Programs (with priority)
-CREATE TABLE Programs (
-    ProgramID INT AUTO_INCREMENT PRIMARY KEY,
-    Code VARCHAR(20) NOT NULL,    -- e.g. IT
-    Name VARCHAR(100) NOT NULL,
-    Priority INT NOT NULL         -- 1 = highest priority
-);
+SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
+START TRANSACTION;
+SET time_zone = "+00:00";
 
--- Year levels
-CREATE TABLE YearLevels (
-    YearLevelID INT AUTO_INCREMENT PRIMARY KEY,
-    Level INT NOT NULL            -- 1,2,3,4
-);
- 
--- Student counts (per program+year)
-CREATE TABLE ProgramYearCounts (
-    CountID INT AUTO_INCREMENT PRIMARY KEY,
-    ProgramID INT NOT NULL,
-    YearLevelID INT NOT NULL,
-    StudentCount INT NOT NULL,
-    FOREIGN KEY (ProgramID) REFERENCES Programs(ProgramID),
-    FOREIGN KEY (YearLevelID) REFERENCES YearLevels(YearLevelID)
-);
- 
--- Sections (auto-generated)
-CREATE TABLE Sections (
-    SectionID INT AUTO_INCREMENT PRIMARY KEY,
-    SectionName VARCHAR(50) NOT NULL,
-    ProgramID INT NOT NULL,
-    YearLevelID INT NOT NULL,
-    FOREIGN KEY (ProgramID) REFERENCES Programs(ProgramID),
-    FOREIGN KEY (YearLevelID) REFERENCES YearLevels(YearLevelID)
-);
- 
--- Subjects
-CREATE TABLE Term2Courses (
-    SubjectID INT AUTO_INCREMENT PRIMARY KEY,
-    SubjectCode VARCHAR(20) NOT NULL,
-    SubjectName VARCHAR(100) NOT NULL,
-    IsLab BOOLEAN NOT NULL,s
-    ProgramID INT NOT NULL,
-    YearLevelID INT NOT NULL,
-    FOREIGN KEY (ProgramID) REFERENCES Programs(ProgramID),
-    FOREIGN KEY (YearLevelID) REFERENCES YearLevels(YearLevelID)
-);
- 
--- Rooms
-CREATE TABLE Rooms (
-    RoomID INT AUTO_INCREMENT PRIMARY KEY,
-    RoomName VARCHAR(50) NOT NULL,
-    RoomType ENUM('Lecture','Lab') NOT NULL
-);
- 
--- Time slots (e.g. Mon-Thu 7-9AM)
-CREATE TABLE TimeSlots (
-    TimeSlotID INT AUTO_INCREMENT PRIMARY KEY,
-    DayPattern VARCHAR(20) NOT NULL,   -- Mon-Thu, Tue-Fri, Wed-Sat
-    StartTime TIME NOT NULL,
-    EndTime TIME NOT NULL
-);
- 
--- Final schedule
-CREATE TABLE Schedule (
-    ScheduleID INT AUTO_INCREMENT PRIMARY KEY,
-    SectionID INT NOT NULL,
-    SubjectID INT NOT NULL,
-    RoomID INT NOT NULL,
-    TimeSlotID INT NOT NULL,
-    FOREIGN KEY (SectionID) REFERENCES Sections(SectionID),
-    FOREIGN KEY (SubjectID) REFERENCES Subjects(SubjectID),
-    FOREIGN KEY (RoomID) REFERENCES Rooms(RoomID),
-    FOREIGN KEY (TimeSlotID) REFERENCES TimeSlots(TimeSlotID)
-);
 
-INSERT INTO Term2Courses (SubjectCode, SubjectName, IsLab, ProgramID, YearLevelID) VALUES
--- DISCRETE STRUCTURES 1
-('CCDISTR1', 'DISCRETE STRUCTURES 1 - LEC', FALSE, 1, 1),
-('CCDISTR1', 'DISCRETE STRUCTURES 1 - LAB', TRUE, 1, 1),
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8mb4 */;
 
--- INTERMEDIATE PROGRAMMING
-('CCPRGG2X', 'INTERMEDIATE PROGRAMMING - LEC', FALSE, 1, 1),
-('CCPRG2BL', 'INTERMEDIATE PROGRAMMING - LAB', TRUE, 1, 1),
+--
+-- Database: `schedulingdb`
+--
 
--- COMPUTER ARCHITECTURE AND ORGANIZATION
-('CCOMPORL', 'COMPUTER ARCHITECTURE AND ORGANIZATION - LEC', FALSE, 1, 2),
-('CCOMPORL', 'COMPUTER ARCHITECTURE AND ORGANIZATION - LAB', TRUE, 1, 2),
+-- --------------------------------------------------------
 
--- DATABASE SYSTEMS
-('CCDATSYL', 'DATABASE SYSTEMS - LEC', FALSE, 1, 2),
-('CCDATSYL', 'DATABASE SYSTEMS - LAB', TRUE, 1, 2),
+--
+-- Table structure for table `programs`
+--
 
--- SPORTS ELECTIVE 2
-('CCSPEL2X', 'SPORTS ELECTIVE 2 (E-GAMES DESIGN II) - LEC', FALSE, 1, 2),
-('CCSPEL2X', 'SPORTS ELECTIVE 2 (E-GAMES DESIGN II) - LAB', TRUE, 1, 2),
+CREATE TABLE `programs` (
+  `ProgramID` int(11) NOT NULL,
+  `Code` varchar(20) NOT NULL,
+  `Name` varchar(100) NOT NULL,
+  `Priority` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- SOFTWARE ENGINEERING 1
-('CCSFEN1L', 'SOFTWARE ENGINEERING 1 - LEC', FALSE, 1, 3),
-('CCSFEN1L', 'SOFTWARE ENGINEERING 1 - LAB', TRUE, 1, 3),
+--
+-- Dumping data for table `programs`
+--
 
--- INFORMATION ASSURANCE AND SECURITY
-('CTINASSL', 'INFORMATION ASSURANCE AND SECURITY - LEC', FALSE, 1, 3),
-('CTINASSL', 'INFORMATION ASSURANCE AND SECURITY - LAB', TRUE, 1, 3),
+INSERT INTO `programs` (`ProgramID`, `Code`, `Name`, `Priority`) VALUES
+(1, 'IT', 'Information Technology', 1),
+(2, 'IS', 'Information Systems', 2),
+(3, 'CS', 'Computer Science', 3);
 
--- NETWORK AND COMMUNICATIONS
-('CCNETCOL', 'NETWORK AND COMMUNICATIONS - LEC', FALSE, 1, 3),
-('CCNETCOL', 'NETWORK AND COMMUNICATIONS - LAB', TRUE, 1, 3),
+-- --------------------------------------------------------
 
--- INTERNSHIP
-('CCCSINTX', 'INTERNSHIP (MIN. 162 HRS)', TRUE, 1, 4),
+--
+-- Table structure for table `programyearcounts`
+--
 
--- C.S. ELECTIVE 2
-('CCSELE2L', 'C.S. ELECTIVE 2 - LEC', FALSE, 1, 4),
-('CCSELE2L', 'C.S. ELECTIVE 2 - LAB', TRUE, 1, 4),
+CREATE TABLE `programyearcounts` (
+  `CountID` int(11) NOT NULL,
+  `ProgramID` int(11) NOT NULL,
+  `YearLevelID` int(11) NOT NULL,
+  `StudentCount` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- FUNDAMENTALS OF INFORMATION SYSTEMS
-('CCFUINSY', 'FUNDAMENTALS OF INFORMATION SYSTEMS - LEC', FALSE, 2, 1),
-('CCFUINSY', 'FUNDAMENTALS OF INFORMATION SYSTEMS - LAB', TRUE, 2, 1),
+-- --------------------------------------------------------
 
--- INTERMEDIATE PROGRAMMING (BSIS)
-('CCPRGG2X', 'INTERMEDIATE PROGRAMMING - LEC', FALSE, 2, 1),
-('CCPRG2BL', 'INTERMEDIATE PROGRAMMING - LAB', TRUE, 2, 1),
+--
+-- Table structure for table `rooms`
+--
 
--- ENTERPRISE ARCHITECTURE
-('CIENTARL', 'ENTERPRISE ARCHITECTURE - LEC', FALSE, 2, 2),
-('CIENTARL', 'ENTERPRISE ARCHITECTURE - LAB', TRUE, 2, 2),
+CREATE TABLE `rooms` (
+  `RoomID` int(11) NOT NULL,
+  `RoomName` varchar(50) NOT NULL,
+  `RoomType` enum('Lecture','Lab') NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- SPORTS ELECTIVE 2 (BSIS)
-('CCSPEL2X', 'SPORTS ELECTIVE 2 (E-GAMES DESIGN II) - LEC', FALSE, 2, 2),
-('CCSPEL2X', 'SPORTS ELECTIVE 2 (E-GAMES DESIGN II) - LAB', TRUE, 2, 2),
+--
+-- Dumping data for table `rooms`
+--
 
--- QUANTITATIVE METHODS
-('CCQUAMET', 'QUANTITATIVE METHODS - LEC', FALSE, 2, 2),
-('CCQUAMET', 'QUANTITATIVE METHODS - LAB', TRUE, 2, 2),
+INSERT INTO `rooms` (`RoomName`, `RoomType`) VALUES
+('Room 203', 'Lecture'),
+('Room 204', 'Lecture'),
+('ComLab 1', 'Lab'),
+('ComLab 5', 'Lab'),
+('ComLab 6', 'Lab');
 
--- BUSINESS PROCESS MANAGEMENT
-('BUPRDEMA', 'BUSINESS PROCESS MANAGEMENT - LEC', FALSE, 2, 2),
+-- --------------------------------------------------------
 
--- E-COMMERCE AND DIGITAL ENTREPRENEURSHIP
-('CISECDEL', 'E-COMMERCE AND DIGITAL ENTREPRENEURSHIP - LEC', FALSE, 2, 3),
+--
+-- Table structure for table `schedule`
+--
 
--- SYSTEMS ANALYSIS AND DESIGN
-('CTSYSADL', 'SYSTEMS ANALYSIS AND DESIGN - LEC', FALSE, 2, 3),
-('CTSYSADL', 'SYSTEMS ANALYSIS AND DESIGN - LAB', TRUE, 2, 3),
+CREATE TABLE `schedule` (
+  `ScheduleID` int(11) NOT NULL,
+  `SectionID` int(11) NOT NULL,
+  `SubjectID` int(11) NOT NULL,
+  `RoomID` int(11) NOT NULL,
+  `TimeSlotID` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- I.S. PROJECT MANAGEMENT
-('CISPRMAL', 'I.S. PROJECT MANAGEMENT - LEC', FALSE, 2, 3),
-('CISPRMAL', 'I.S. PROJECT MANAGEMENT - LAB', TRUE, 2, 3),
+-- --------------------------------------------------------
 
--- I.S. ELECTIVE 1
-('CISELE1L', 'I.S. ELECTIVE 1 - LEC', FALSE, 2, 3),
-('CISELE1L', 'I.S. ELECTIVE 1 - LAB', TRUE, 2, 3),
+--
+-- Table structure for table `sections`
+--
 
--- INTERNSHIP (BSIS)
-('CCISINTX', 'INTERNSHIP (486 HRS)', FALSE, 2, 4),
+CREATE TABLE `sections` (
+  `SectionID` int(11) NOT NULL,
+  `SectionName` varchar(50) NOT NULL,
+  `ProgramID` int(11) NOT NULL,
+  `YearLevelID` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- INTRODUCTION TO PROGRAMMING & THEORIES (BSIT)
-('INPROLA', 'INTRODUCTION TO PROGRAMMING & THEORIES - LEC', FALSE, 3, 1),
-('INPROLA', 'INTRODUCTION TO PROGRAMMING & THEORIES - LAB', TRUE, 3, 1);
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `term2courses`
+--
+
+CREATE TABLE `term2courses` (
+  `SubjectID` int(11) NOT NULL,
+  `SubjectCode` varchar(20) NOT NULL,
+  `SubjectName` varchar(100) NOT NULL,
+  `IsLab` tinyint(1) NOT NULL,
+  `ProgramID` int(11) NOT NULL,
+  `YearLevelID` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `term2courses`
+--
+
+INSERT INTO `term2courses` (`SubjectID`, `SubjectCode`, `SubjectName`, `IsLab`, `ProgramID`, `YearLevelID`) VALUES
+(1, 'CCDISTR1', 'DISCRETE STRUCTURES 1 - LEC', 0, 3, 1),
+(2, 'CCDISTR1', 'DISCRETE STRUCTURES 1 - LAB', 1, 3, 1),
+(3, 'CCPRGG2X', 'INTERMEDIATE PROGRAMMING - LEC', 0, 3, 1),
+(4, 'CCPRG2BL', 'INTERMEDIATE PROGRAMMING - LAB', 1, 3, 1),
+(5, 'CCOMPORL', 'COMPUTER ARCHITECTURE AND ORGANIZATION - LEC', 0, 3, 2),
+(6, 'CCOMPORL', 'COMPUTER ARCHITECTURE AND ORGANIZATION - LAB', 1, 3, 2),
+(7, 'CCDATSYL', 'DATABASE SYSTEMS - LEC', 0, 3, 2),
+(8, 'CCDATSYL', 'DATABASE SYSTEMS - LAB', 1, 3, 2),
+(9, 'CCSPEL2X', 'SPORTS ELECTIVE 2 (E-GAMES DESIGN II) - LEC', 0, 3, 2),
+(10, 'CCSPEL2X', 'SPORTS ELECTIVE 2 (E-GAMES DESIGN II) - LAB', 1, 3, 2),
+(11, 'CCSFEN1L', 'SOFTWARE ENGINEERING 1 - LEC', 0, 3, 3),
+(12, 'CCSFEN1L', 'SOFTWARE ENGINEERING 1 - LAB', 1, 3, 3),
+(13, 'CTINASSL', 'INFORMATION ASSURANCE AND SECURITY - LEC', 0, 3, 3),
+(14, 'CTINASSL', 'INFORMATION ASSURANCE AND SECURITY - LAB', 1, 3, 3),
+(15, 'CCNETCOL', 'NETWORK AND COMMUNICATIONS - LEC', 0, 3, 3),
+(16, 'CCNETCOL', 'NETWORK AND COMMUNICATIONS - LAB', 1, 3, 3),
+(17, 'CCCSINTX', 'INTERNSHIP (MIN. 162 HRS)', 1, 3, 4),
+(18, 'CCSELE2L', 'C.S. ELECTIVE 2 - LEC', 0, 3, 4),
+(19, 'CCSELE2L', 'C.S. ELECTIVE 2 - LAB', 1, 3, 4),
+(20, 'CCFUINSY', 'FUNDAMENTALS OF INFORMATION SYSTEMS - LEC', 0, 2, 1),
+(21, 'CCFUINSY', 'FUNDAMENTALS OF INFORMATION SYSTEMS - LAB', 1, 2, 1),
+(22, 'CCPRGG2X', 'INTERMEDIATE PROGRAMMING - LEC', 0, 2, 1),
+(23, 'CCPRG2BL', 'INTERMEDIATE PROGRAMMING - LAB', 1, 2, 1),
+(24, 'CIENTARL', 'ENTERPRISE ARCHITECTURE - LEC', 0, 2, 2),
+(25, 'CIENTARL', 'ENTERPRISE ARCHITECTURE - LAB', 1, 2, 2),
+(26, 'CCSPEL2X', 'SPORTS ELECTIVE 2 (E-GAMES DESIGN II) - LEC', 0, 2, 2),
+(27, 'CCSPEL2X', 'SPORTS ELECTIVE 2 (E-GAMES DESIGN II) - LAB', 1, 2, 2),
+(28, 'CCQUAMET', 'QUANTITATIVE METHODS - LEC', 0, 2, 2),
+(29, 'CCQUAMET', 'QUANTITATIVE METHODS - LAB', 1, 2, 2),
+(30, 'BUPRDEMA', 'BUSINESS PROCESS MANAGEMENT - LEC', 0, 2, 2),
+(31, 'CISECDEL', 'E-COMMERCE AND DIGITAL ENTREPRENEURSHIP - LEC', 0, 2, 3),
+(32, 'CTSYSADL', 'SYSTEMS ANALYSIS AND DESIGN - LEC', 0, 2, 3),
+(33, 'CTSYSADL', 'SYSTEMS ANALYSIS AND DESIGN - LAB', 1, 2, 3),
+(34, 'CISPRMAL', 'I.S. PROJECT MANAGEMENT - LEC', 0, 2, 3),
+(35, 'CISPRMAL', 'I.S. PROJECT MANAGEMENT - LAB', 1, 2, 3),
+(36, 'CISELE1L', 'I.S. ELECTIVE 1 - LEC', 0, 2, 3),
+(37, 'CISELE1L', 'I.S. ELECTIVE 1 - LAB', 1, 2, 3),
+(38, 'CCISINTX', 'INTERNSHIP (486 HRS)', 0, 2, 4),
+(39, 'INPROLA', 'INTRODUCTION TO PROGRAMMING & THEORIES - LEC', 0, 1, 1),
+(40, 'INPROLA', 'INTRODUCTION TO PROGRAMMING & THEORIES - LAB', 1, 1, 1),
+(41, 'MANPRIN', 'MANAGEMENT PRINCIPLES - LEC', 0, 1, 1),
+(42, 'OPESYST', 'OPERATING SYSTEMS - LEC', 0, 1, 1),
+(43, 'OPESYST', 'OPERATING SYSTEMS - LAB', 1, 1, 1),
+(44, 'WEBPROG', 'WEB PROGRAMMING (for BSIT) - LEC', 0, 1, 2),
+(45, 'WEBPROG', 'WEB PROGRAMMING (for BSIT) - LAB', 1, 1, 2),
+(46, 'MOBPROG', 'MOBILE PROGRAMMING - LEC', 0, 1, 2),
+(47, 'MOBPROG', 'MOBILE PROGRAMMING - LAB', 1, 1, 2),
+(48, 'DATAMA2', 'DATABASE MANAGEMENT 2 and ADMINISTRATION - LEC', 0, 1, 2),
+(49, 'DATAMA2', 'DATABASE MANAGEMENT 2 and ADMINISTRATION - LAB', 1, 1, 2),
+(50, 'PEMBEDS', 'PROGRAMMING EMBEDDED SYSTEMS - LEC', 0, 1, 2),
+(51, 'PEMBEDS', 'PROGRAMMING EMBEDDED SYSTEMS - LAB', 1, 1, 2),
+(52, 'ELECTV1', 'ELECTIVE 1 - LEC', 0, 1, 2),
+(53, 'ELECTV1', 'ELECTIVE 1 - LAB', 1, 1, 2),
+(54, 'CLDCOMP', 'CLOUD COMPUTING & VIRTUALIZATION - LEC', 0, 1, 2),
+(55, 'CLDCOMP', 'CLOUD COMPUTING & VIRTUALIZATION - LAB', 1, 1, 2),
+(56, 'MCSPROJ', 'APPLIED PROJECT - SYSTEM PROTOTYPE - LEC', 0, 1, 3),
+(57, 'MCSPROJ', 'APPLIED PROJECT - SYSTEM PROTOTYPE - LAB', 1, 1, 3),
+(58, 'TENTREP', 'TECHNOPRENEURSHIP - LEC', 0, 1, 3),
+(59, 'ELECTV4', 'ELECTIVE 4 - LEC', 0, 1, 3),
+(60, 'ELECTV4', 'ELECTIVE 4 - LAB', 1, 1, 3),
+(61, 'xINTERN1', 'INTERNSHIP 1', 0, 1, 4);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `timeslots`
+--
+
+CREATE TABLE `timeslots` (
+  `TimeSlotID` int(11) NOT NULL,
+  `DayPattern` varchar(20) NOT NULL,
+  `StartTime` time NOT NULL,
+  `EndTime` time NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `yearlevels`
+--
+
+CREATE TABLE `yearlevels` (
+  `YearLevelID` int(11) NOT NULL,
+  `Level` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `yearlevels`
+--
+
+INSERT INTO `yearlevels` (`YearLevelID`, `Level`) VALUES
+(1, 1),
+(2, 2),
+(3, 3),
+(4, 4);
+
+--
+-- Indexes for dumped tables
+--
+
+--
+-- Indexes for table `programs`
+--
+ALTER TABLE `programs`
+  ADD PRIMARY KEY (`ProgramID`);
+
+--
+-- Indexes for table `programyearcounts`
+--
+ALTER TABLE `programyearcounts`
+  ADD PRIMARY KEY (`CountID`),
+  ADD KEY `ProgramID` (`ProgramID`),
+  ADD KEY `YearLevelID` (`YearLevelID`);
+
+--
+-- Indexes for table `rooms`
+--
+ALTER TABLE `rooms`
+  ADD PRIMARY KEY (`RoomID`);
+
+--
+-- Indexes for table `schedule`
+--
+ALTER TABLE `schedule`
+  ADD PRIMARY KEY (`ScheduleID`),
+  ADD KEY `SectionID` (`SectionID`),
+  ADD KEY `SubjectID` (`SubjectID`),
+  ADD KEY `RoomID` (`RoomID`),
+  ADD KEY `TimeSlotID` (`TimeSlotID`);
+
+--
+-- Indexes for table `sections`
+--
+ALTER TABLE `sections`
+  ADD PRIMARY KEY (`SectionID`),
+  ADD KEY `ProgramID` (`ProgramID`),
+  ADD KEY `YearLevelID` (`YearLevelID`);
+
+--
+-- Indexes for table `term2courses`
+--
+ALTER TABLE `term2courses`
+  ADD PRIMARY KEY (`SubjectID`),
+  ADD KEY `ProgramID` (`ProgramID`),
+  ADD KEY `YearLevelID` (`YearLevelID`);
+
+--
+-- Indexes for table `timeslots`
+--
+ALTER TABLE `timeslots`
+  ADD PRIMARY KEY (`TimeSlotID`);
+
+--
+-- Indexes for table `yearlevels`
+--
+ALTER TABLE `yearlevels`
+  ADD PRIMARY KEY (`YearLevelID`);
+
+--
+-- AUTO_INCREMENT for dumped tables
+--
+
+--
+-- AUTO_INCREMENT for table `programs`
+--
+ALTER TABLE `programs`
+  MODIFY `ProgramID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+
+--
+-- AUTO_INCREMENT for table `programyearcounts`
+--
+ALTER TABLE `programyearcounts`
+  MODIFY `CountID` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `rooms`
+--
+ALTER TABLE `rooms`
+  MODIFY `RoomID` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `schedule`
+--
+ALTER TABLE `schedule`
+  MODIFY `ScheduleID` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `sections`
+--
+ALTER TABLE `sections`
+  MODIFY `SectionID` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `term2courses`
+--
+ALTER TABLE `term2courses`
+  MODIFY `SubjectID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=62;
+
+--
+-- AUTO_INCREMENT for table `timeslots`
+--
+ALTER TABLE `timeslots`
+  MODIFY `TimeSlotID` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `yearlevels`
+--
+ALTER TABLE `yearlevels`
+  MODIFY `YearLevelID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+
+--
+-- Constraints for dumped tables
+--
+
+--
+-- Constraints for table `programyearcounts`
+--
+ALTER TABLE `programyearcounts`
+  ADD CONSTRAINT `programyearcounts_ibfk_1` FOREIGN KEY (`ProgramID`) REFERENCES `programs` (`ProgramID`),
+  ADD CONSTRAINT `programyearcounts_ibfk_2` FOREIGN KEY (`YearLevelID`) REFERENCES `yearlevels` (`YearLevelID`);
+
+--
+-- Constraints for table `schedule`
+--
+ALTER TABLE `schedule`
+  ADD CONSTRAINT `schedule_ibfk_1` FOREIGN KEY (`SectionID`) REFERENCES `sections` (`SectionID`),
+  ADD CONSTRAINT `schedule_ibfk_2` FOREIGN KEY (`SubjectID`) REFERENCES `term2courses` (`SubjectID`),
+  ADD CONSTRAINT `schedule_ibfk_3` FOREIGN KEY (`RoomID`) REFERENCES `rooms` (`RoomID`),
+  ADD CONSTRAINT `schedule_ibfk_4` FOREIGN KEY (`TimeSlotID`) REFERENCES `timeslots` (`TimeSlotID`);
+
+--
+-- Constraints for table `sections`
+--
+ALTER TABLE `sections`
+  ADD CONSTRAINT `sections_ibfk_1` FOREIGN KEY (`ProgramID`) REFERENCES `programs` (`ProgramID`),
+  ADD CONSTRAINT `sections_ibfk_2` FOREIGN KEY (`YearLevelID`) REFERENCES `yearlevels` (`YearLevelID`);
+
+--
+-- Constraints for table `term2courses`
+--
+ALTER TABLE `term2courses`
+  ADD CONSTRAINT `term2courses_ibfk_1` FOREIGN KEY (`ProgramID`) REFERENCES `programs` (`ProgramID`),
+  ADD CONSTRAINT `term2courses_ibfk_2` FOREIGN KEY (`YearLevelID`) REFERENCES `yearlevels` (`YearLevelID`);
+COMMIT;
+
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
