@@ -72,12 +72,12 @@ CREATE TABLE `rooms` (
 -- Dumping data for table `rooms`
 --
 
-INSERT INTO `rooms` (`RoomName`, `RoomType`) VALUES
-('Room 203', 'Lecture'),
-('Room 204', 'Lecture'),
-('ComLab 1', 'Lab'),
-('ComLab 5', 'Lab'),
-('ComLab 6', 'Lab');
+INSERT INTO `rooms` (`RoomID`,`RoomName`, `RoomType`) VALUES
+(1, 'Room 203', 'Lecture'),
+(2, 'Room 204', 'Lecture'),
+(3, 'ComLab 1', 'Lab'),
+(4, 'ComLab 5', 'Lab'),
+(5, 'ComLab 6', 'Lab');
 
 -- --------------------------------------------------------
 
