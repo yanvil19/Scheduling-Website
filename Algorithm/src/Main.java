@@ -6,7 +6,7 @@ public class Main {
 
         Display display = new Display();
         Enrollment enroll = new Enrollment();
-        Algorithm algo = new Algorithm();
+        Scheduler sched = new Scheduler();
         Scanner scanner = new Scanner(System.in);
 
         int choice;
@@ -16,8 +16,8 @@ public class Main {
             System.out.println("\n===== MENU =====");
             System.out.println("1. Display all courses");
             System.out.println("2. Get number of Enrollees");
-            System.out.println("3. Run scheduling algorithm (placeholder)");
-            System.out.println("4. Create Sections");
+            System.out.println("3. Generate Sections");
+            System.out.println("4. Generate and Display Schedule");
             System.out.println("0. Exit");
             System.out.print("Enter your choice: ");
 
@@ -31,17 +31,16 @@ public class Main {
                     enroll.handleEnrollment();
                     break;
                 case 3:
-//                    algo.runScheduler();
-                    break;
-                case 4: // 👈 added case
                     System.out.print("Are you sure you want to create sections? This will clear existing sections and schedules. (Y/N): ");
                     choice2 = Character.toUpperCase(scanner.next().charAt(0));
-                    if(choice2 == 'Y'){
+                    if (choice2 == 'Y') {
                         SectionCreator.createSections();
-                    }
-                    else{
+                    } else {
                         System.out.println("❌ Canceled section creation!");
                     }
+                    break;
+                case 4:
+//                    sched.generateSchedule();
                     break;
                 case 0:
                     System.out.println("👋 Exiting...");
