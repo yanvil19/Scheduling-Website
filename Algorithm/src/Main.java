@@ -25,7 +25,7 @@ public class Main {
 
             switch (choice) {
                 case 1:
-                    display.displayAllCourses();
+                    display.showTerm2Courses();
                     break;
                 case 2:
                     enroll.handleEnrollment();
