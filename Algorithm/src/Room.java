@@ -1,7 +1,7 @@
-public class Room {
-    public int id;
-    public String name;
-    public String type; // "Lecture" or "Lab"
+class Room {
+    int id;
+    String name;
+    String type;
 
     public Room(int id, String name, String type) {
         this.id = id;
@@ -9,4 +9,8 @@ public class Room {
         this.type = type;
     }
 
+    public boolean typeMatches(Subject subject) {
+        return (subject.isLab() && type.equalsIgnoreCase("Lab")) ||
+                (!subject.isLab() && type.equalsIgnoreCase("Lecture"));
+    }
 }

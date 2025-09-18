@@ -1,6 +1,11 @@
-public class Timeslot {
-    public int id;
-    public String day;
-    public String start;
-    public String end;
+class Timeslot {
+    int id;
+    String start;
+    String end;
+
+    public Timeslot(int id, String start, String end) {
+        this.id = id;
+        this.start = start;
+        this.end = end;
+    }
 }

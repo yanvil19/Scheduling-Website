@@ -1,6 +1,13 @@
-public class Section {
-    public int id;
-    public String name;
-    public int programId;
-    public int yearLevelId;
+class Section {
+    int id;
+    String name;
+    int programId;
+    int yearLevelId;
+
+    public Section(int id, String name, int programId, int yearLevelId) {
+        this.id = id;
+        this.name = name;
+        this.programId = programId;
+        this.yearLevelId = yearLevelId;
+    }
 }

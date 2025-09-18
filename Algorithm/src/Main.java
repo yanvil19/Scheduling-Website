@@ -40,7 +40,7 @@ public class Main {
                     }
                     break;
                 case 4:
-//                    sched.generateSchedule();
+                    sched.generateSchedule();
                     break;
                 case 0:
                     System.out.println("👋 Exiting...");
