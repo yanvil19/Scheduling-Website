@@ -152,6 +152,9 @@ public class Scheduler {
             }
         }
 
+        // Try to schedule unscheduled courses as online classes
+        scheduleOnlineClasses(sectionSlotDayUsage, days);
+
         printSchedule();
     }
 
@@ -236,6 +239,132 @@ public class Scheduler {
         return false;
     }
 
+    private void scheduleOnlineClasses(Set<String> sectionSlotDayUsage, String[] days) {
+        List<String> stillUnscheduled = new ArrayList<>();
+
+        for (String unscheduledItem : unscheduled) {
+            boolean scheduled = false;
+
+            // Parse the unscheduled item to get details
+            // Expected format: "SUBJECTCODE (SectionName) - TYPE"
+            try {
+                String[] parts = unscheduledItem.split(" \\(");
+                if (parts.length < 2) continue; // Skip malformed entries
+
+                String subjectCode = parts[0];
+                String remaining = parts[1]; // "SectionName) - TYPE"
+
+                String[] sectionTypeParts = remaining.split("\\) - ");
+                if (sectionTypeParts.length < 2) continue; // Skip malformed entries
+
+                String sectionName = sectionTypeParts[0];
+                String type = sectionTypeParts[1];
+                // Find the corresponding section and subject
+                Section targetSection = null;
+                Subject targetSubject = null;
+
+                for (Section section : sections) {
+                    if (section.name.equals(sectionName)) {
+                        targetSection = section;
+                        break;
+                    }
+                }
+
+                for (Subject subject : subjects) {
+                    if (subject.code.equals(subjectCode) && subject.type.equals(type)) {
+                        targetSubject = subject;
+                        break;
+                    }
+                }
+
+                if (targetSection != null && targetSubject != null) {
+                    // Try to schedule as online class
+                    if (targetSubject.totalTime > 2.0) {
+                        scheduled = tryScheduleOnlinePartnerDays(targetSection, targetSubject, sectionSlotDayUsage, days);
+                    } else {
+                        scheduled = tryScheduleOnlineSingleDay(targetSection, targetSubject, sectionSlotDayUsage, days);
+                    }
+                }
+            } catch (Exception e) {
+                // Skip malformed entries and continue
+                System.out.println("Warning: Could not parse unscheduled item: " + unscheduledItem);
+            }
+
+            if (!scheduled) {
+                stillUnscheduled.add(unscheduledItem);
+            }
+        }
+
+        // Update unscheduled list with courses that still couldn't be scheduled
+        unscheduled = stillUnscheduled;
+    }
+
+    private boolean tryScheduleOnlinePartnerDays(Section section, Subject subject,
+                                                 Set<String> sectionSlotDayUsage, String[] days) {
+        double hoursPerSession = subject.totalTime / 2.0;
+
+        for (Timeslot slot : timeslots) {
+            // Try each partner day pair
+            String[] partnerPairs = {"Monday", "Tuesday", "Wednesday"};
+
+            for (String firstDay : partnerPairs) {
+                String secondDay = PARTNER_DAYS.get(firstDay);
+
+                String sectionSlotDay1 = section.id + "-" + slot.id + "-" + firstDay;
+                String sectionSlotDay2 = section.id + "-" + slot.id + "-" + secondDay;
+
+                // Check if both days are available for the section (no room conflict needed for online)
+                if (!sectionSlotDayUsage.contains(sectionSlotDay1) &&
+                        !sectionSlotDayUsage.contains(sectionSlotDay2)) {
+
+                    // Create entries for both days as online classes
+                    ScheduleEntry entry1 = new ScheduleEntry(
+                            section.name, subject.code, subject.name, subject.type,
+                            "Online", slot.start + "-" + slot.end, firstDay, hoursPerSession
+                    );
+
+                    ScheduleEntry entry2 = new ScheduleEntry(
+                            section.name, subject.code, subject.name, subject.type,
+                            "Online", slot.start + "-" + slot.end, secondDay, hoursPerSession
+                    );
+
+                    schedule.add(entry1);
+                    schedule.add(entry2);
+
+                    // Mark as used for the section
+                    sectionSlotDayUsage.add(sectionSlotDay1);
+                    sectionSlotDayUsage.add(sectionSlotDay2);
+
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private boolean tryScheduleOnlineSingleDay(Section section, Subject subject,
+                                               Set<String> sectionSlotDayUsage, String[] days) {
+        for (Timeslot slot : timeslots) {
+            for (String day : days) {
+                String sectionSlotDay = section.id + "-" + slot.id + "-" + day;
+
+                // Check if the section is available (no room conflict needed for online)
+                if (!sectionSlotDayUsage.contains(sectionSlotDay)) {
+                    ScheduleEntry entry = new ScheduleEntry(
+                            section.name, subject.code, subject.name, subject.type,
+                            "Online", slot.start + "-" + slot.end, day, subject.totalTime
+                    );
+
+                    schedule.add(entry);
+                    sectionSlotDayUsage.add(sectionSlotDay);
+
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     private int getProgramPriority(int programId) {
         try (Connection conn = JDBC.getConnection()) {
             PreparedStatement ps = conn.prepareStatement("SELECT Code FROM programs WHERE ProgramID=?");
@@ -257,10 +386,6 @@ public class Scheduler {
 
     private void printSchedule() {
         System.out.println("\n📅 GENERATED SCHEDULE:");
-        System.out.println("=============================================================================================================================================================");
-        System.out.printf("%-12s | %-12s | %-50s | %-4s | %-12s | %-17s | %-10s | %-8s%n",
-                "Section", "Code", "Subject Name", "Type", "Room", "Time Slot", "Day", "Duration (hrs)");
-        System.out.println("=============================================================================================================================================================");
 
         // Sort schedule by section, then by day, then by time
         schedule.sort((a, b) -> {
@@ -273,19 +398,47 @@ public class Scheduler {
             return a.timeSlot.compareTo(b.timeSlot);
         });
 
-        for (ScheduleEntry entry : schedule) {
-            System.out.printf("%-12s | %-12s | %-50s | %-4s | %-12s | %-15s | %-10s | %-8.3f%n",
-                    entry.sectionName,
-                    entry.subjectCode,
-                    entry.subjectName,
-                    entry.type,
-                    entry.roomName,
-                    entry.timeSlot,
-                    entry.day,
-                    entry.duration);
+        String[] days = {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
+
+        for (String currentDay : days) {
+            // Filter entries for current day
+            List<ScheduleEntry> dayEntries = new ArrayList<>();
+            for (ScheduleEntry entry : schedule) {
+                if (entry.day.equals(currentDay)) {
+                    dayEntries.add(entry);
+                }
+            }
+
+            if (!dayEntries.isEmpty()) {
+                System.out.println("\n=============================================================================================================================================================");
+                System.out.println("                                                                    " + currentDay.toUpperCase());
+                System.out.println("=============================================================================================================================================================");
+                System.out.printf("%-12s | %-12s | %-50s | %-4s | %-12s | %-15s | %-8s%n",
+                        "Section", "Code", "Subject Name", "Type", "Room", "Time Slot", "Duration");
+                System.out.println("=============================================================================================================================================================");
+
+                for (ScheduleEntry entry : dayEntries) {
+                    System.out.printf("%-12s | %-12s | %-50s | %-4s | %-12s | %-15s | %-8.3f%n",
+                            entry.sectionName,
+                            entry.subjectCode,
+                            entry.subjectName,
+                            entry.type,
+                            entry.roomName,
+                            entry.timeSlot,
+                            entry.duration);
+                }
+                System.out.println("=============================================================================================================================================================");
+                System.out.println(currentDay + " total entries: " + dayEntries.size());
+            } else {
+                System.out.println("\n=============================================================================================================================================================");
+                System.out.println("                                                                    " + currentDay.toUpperCase());
+                System.out.println("=============================================================================================================================================================");
+                System.out.println("No classes scheduled for " + currentDay);
+                System.out.println("=============================================================================================================================================================");
+            }
         }
 
-        System.out.println("====================================================================================================================================================");
+        System.out.println("\n📊 SUMMARY:");
         System.out.println("Total scheduled entries: " + schedule.size());
 
         if (!unscheduled.isEmpty()) {
