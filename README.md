@@ -36,83 +36,101 @@
 - **Be in the root directory**java -cp "bin;mysql-connector-j-9.4.0.jar" Main
 
 
+## Algorithm
 🧩 Main Pseudo Algorithm: generateSchedule()
 
 ALGORITHM GenerateSchedule
 BEGIN
-1. Initialize Data Structures
-   - Clear lists: sections, subjects, rooms, timeslots, schedule, unscheduled
+  1. Initialize Data Structures
+     - Clear lists: sections, subjects, rooms, timeslots, schedule, unscheduled
 
-2. Load Data
-   - CALL loadData()
+  2. Load Data
+     - CALL loadData()
 
-3. Sort Sections by Priority
-   - Program: IT (1) → IS (2) → CS (3)
-   - Year Level: 4th → 3rd → 2nd → 1st
+  3. Sort Sections by Priority
+     - Program Priority: IT (1) → IS (2) → CS (3)
+     - Year Level Priority: 4th → 3rd → 2nd → 1st
 
-4. Initialize Conflict Tracking
-   - used = {} → "roomID-timeslotID-day"
-   - sectionSlotDayUsage = {} → "sectionID-timeslotID-day"
-   - days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+  4. Initialize Conflict Tracking
+     - used = {} → "roomID-timeslotID-day"
+     - sectionSlotDayUsage = {} → "sectionID-timeslotID-day"
+     - days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 
-5. Main Scheduling Loop
-   - For each section
-     - For each subject
-       - Skip if program/year mismatch
-       - If subject.totalTime > 2.0 → tryPlaceOnPartnerDays()
-       - Else → tryPlaceOnSingleDay()
-       - If placement fails → add to unscheduled
+  5. Main Scheduling Loop
+     FOR each section
+       FOR each subject
+         - Skip if program/year mismatch
+         - IF subject.totalTime > 2.0 THEN
+             → CALL tryPlaceOnPartnerDays()
+           ELSE
+             → CALL tryPlaceOnSingleDay()
+         - IF placement fails THEN
+             → Add subject to unscheduled list
 
-6. Display Results
-   - CALL printSchedule()
+  6. Display Results
+     - CALL printSchedule()
 
 END
 
 
-ALGORITHM tryPlaceOnPartnerDays(section, subject, used, sectionSlotDayUsage, days)
+🔁 Sub-Algorithm: tryPlacePartnerDays()
+
+ALGORITHM tryPlacePartnerDays(section, subject, used, sectionSlotDayUsage, days)
 BEGIN
-    hoursPerSession = subject.totalTime ÷ 2
-    partnerPairs = ["Monday", "Tuesday", "Wednesday"]
+  1. Compute Session Duration
+     - hoursPerSession = subject.totalTime ÷ 2
+     - partnerPairs = ["Monday", "Tuesday", "Wednesday"]
 
-    For each timeslot in timeslots
-        For each room in rooms
-            If room.type ≠ subject.type → continue
+  2. Loop Through Resources
+     FOR each timeslot IN timeslots
+       FOR each room IN rooms
+         - IF room.type ≠ subject.type THEN
+             → CONTINUE
 
-            For each firstDay in partnerPairs
-                secondDay = getPartnerDay(firstDay)
+         FOR each firstDay IN partnerPairs
+           - secondDay = getPartnerDay(firstDay)
 
-                Build conflict keys:
-                    sectionSlotDay1, sectionSlotDay2
-                    roomSlotDay1, roomSlotDay2
+           - Build Conflict Keys:
+               sectionSlotDay1 = sectionID-timeslotID-firstDay
+               sectionSlotDay2 = sectionID-timeslotID-secondDay
+               roomSlotDay1 = roomID-timeslotID-firstDay
+               roomSlotDay2 = roomID-timeslotID-secondDay
 
-                If all free →
-                    Create 2 schedule entries (firstDay + secondDay)
-                    Mark resources as used
-                    RETURN true
+           - IF all keys are free THEN
+               → Create 2 schedule entries (firstDay + secondDay)
+               → Mark resources as used
+               → RETURN true
 
-    RETURN false
+  3. Placement Failed
+     - RETURN false
 END
-
 
 
 📅 Sub-Algorithm: tryPlaceOnSingleDay()
 
 ALGORITHM tryPlaceOnSingleDay(section, subject, used, sectionSlotDayUsage, days)
 BEGIN
-    For each timeslot in timeslots
-        For each room in rooms
-            If room.type ≠ subject.type → continue
+  1. Loop Through Resources
+     FOR each timeslot IN timeslots
+       FOR each room IN rooms
+         - IF room.type ≠ subject.type THEN
+             → CONTINUE
 
-            For each day in days
-                Build conflict keys:
-                    sectionSlotDay, roomSlotDay
+         FOR each day IN days
+           - Build Conflict Keys:
+               sectionSlotDay = sectionID-timeslotID-day
+               roomSlotDay = roomID-timeslotID-day
 
-                If free →
-                    Create schedule entry
-                    Mark resources as used
-                    RETURN true
+           - IF keys are free THEN
+               → Create schedule entry
+               → Mark resources as used
+               → RETURN true
 
-    RETURN false
+  2. Placement Failed
+     - RETURN false
 END
+
+
+
 
 
