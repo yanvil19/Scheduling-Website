@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3307
--- Generation Time: Sep 12, 2025 at 09:48 PM
+-- Generation Time: Sep 19, 2025 at 09:24 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -56,6 +56,24 @@ CREATE TABLE `programyearcounts` (
   `StudentCount` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `programyearcounts`
+--
+
+INSERT INTO `programyearcounts` (`CountID`, `ProgramID`, `YearLevelID`, `StudentCount`) VALUES
+(1, 1, 4, 41),
+(2, 1, 3, 41),
+(3, 1, 2, 41),
+(4, 1, 1, 41),
+(5, 2, 4, 41),
+(6, 2, 3, 41),
+(7, 2, 2, 41),
+(8, 2, 1, 41),
+(9, 3, 4, 41),
+(10, 3, 3, 41),
+(11, 3, 2, 41),
+(12, 3, 1, 41);
+
 -- --------------------------------------------------------
 
 --
@@ -72,7 +90,7 @@ CREATE TABLE `rooms` (
 -- Dumping data for table `rooms`
 --
 
-INSERT INTO `rooms` (`RoomID`,`RoomName`, `RoomType`) VALUES
+INSERT INTO `rooms` (`RoomID`, `RoomName`, `RoomType`) VALUES
 (1, 'Room 203', 'Lecture'),
 (2, 'Room 204', 'Lecture'),
 (3, 'ComLab 1', 'Lab'),
@@ -106,6 +124,36 @@ CREATE TABLE `sections` (
   `YearLevelID` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `sections`
+--
+
+INSERT INTO `sections` (`SectionID`, `SectionName`, `ProgramID`, `YearLevelID`) VALUES
+(1, 'BSIT221A', 1, 4),
+(2, 'BSIT221B', 1, 4),
+(3, 'BSIT231A', 1, 3),
+(4, 'BSIT231B', 1, 3),
+(5, 'BSIT241A', 1, 2),
+(6, 'BSIT241B', 1, 2),
+(7, 'BSIT251A', 1, 1),
+(8, 'BSIT251B', 1, 1),
+(9, 'BSIS221A', 2, 4),
+(10, 'BSIS221B', 2, 4),
+(11, 'BSIS231A', 2, 3),
+(12, 'BSIS231B', 2, 3),
+(13, 'BSIS241A', 2, 2),
+(14, 'BSIS241B', 2, 2),
+(15, 'BSIS251A', 2, 1),
+(16, 'BSIS251B', 2, 1),
+(17, 'BSCS221A', 3, 4),
+(18, 'BSCS221B', 3, 4),
+(19, 'BSCS231A', 3, 3),
+(20, 'BSCS231B', 3, 3),
+(21, 'BSCS241A', 3, 2),
+(22, 'BSCS241B', 3, 2),
+(23, 'BSCS251A', 3, 1),
+(24, 'BSCS251B', 3, 1);
+
 -- --------------------------------------------------------
 
 --
@@ -113,16 +161,14 @@ CREATE TABLE `sections` (
 --
 
 CREATE TABLE `term2courses` (
-  `SubjectID` INT(11) NOT NULL AUTO_INCREMENT,
-  `SubjectCode` VARCHAR(20) NOT NULL,
-  `SubjectName` VARCHAR(100) NOT NULL,
-  `IsLab` TINYINT(1) NOT NULL,       -- 0 = Lecture, 1 = Lab
-  `ProgramID` INT(11) NOT NULL,
-  `YearLevelID` INT(11) NOT NULL,
-  `TotalTime` DECIMAL(4,2) NOT NULL, -- e.g., 2.00, 2.67, 4.00
-  PRIMARY KEY (`SubjectID`)
+  `SubjectID` int(11) NOT NULL,
+  `SubjectCode` varchar(20) NOT NULL,
+  `SubjectName` varchar(100) NOT NULL,
+  `IsLab` tinyint(1) NOT NULL,
+  `ProgramID` int(11) NOT NULL,
+  `YearLevelID` int(11) NOT NULL,
+  `TotalTime` decimal(4,2) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
 
 --
 -- Dumping data for table `term2courses`
@@ -131,99 +177,65 @@ CREATE TABLE `term2courses` (
 INSERT INTO `term2courses` (`SubjectID`, `SubjectCode`, `SubjectName`, `IsLab`, `ProgramID`, `YearLevelID`, `TotalTime`) VALUES
 (1, 'CCDISTR1', 'DISCRETE STRUCTURES 1 - LEC', 0, 3, 1, 2.67),
 (2, 'CCDISTR1', 'DISCRETE STRUCTURES 1 - LAB', 1, 3, 1, 4.00),
-
 (3, 'CCPRGG2X', 'INTERMEDIATE PROGRAMMING - LEC', 0, 3, 1, 2.67),
 (4, 'CCPRG2BL', 'INTERMEDIATE PROGRAMMING - LAB', 1, 3, 1, 4.00),
-
 (5, 'CCOMPORL', 'COMPUTER ARCHITECTURE AND ORGANIZATION - LEC', 0, 3, 2, 2.67),
 (6, 'CCOMPORL', 'COMPUTER ARCHITECTURE AND ORGANIZATION - LAB', 1, 3, 2, 4.00),
-
 (7, 'CCDATSYL', 'DATABASE SYSTEMS - LEC', 0, 3, 2, 2.67),
 (8, 'CCDATSYL', 'DATABASE SYSTEMS - LAB', 1, 3, 2, 4.00),
-
 (9, 'CCSPEL2X', 'SPORTS ELECTIVE 2 (E-GAMES DESIGN II) - LEC', 0, 3, 2, 2.00),
 (10, 'CCSPEL2X', 'SPORTS ELECTIVE 2 (E-GAMES DESIGN II) - LAB', 1, 3, 2, 2.00),
-
 (11, 'CCSFEN1L', 'SOFTWARE ENGINEERING 1 - LEC', 0, 3, 3, 2.67),
 (12, 'CCSFEN1L', 'SOFTWARE ENGINEERING 1 - LAB', 1, 3, 3, 4.00),
-
 (13, 'CTINASSL', 'INFORMATION ASSURANCE AND SECURITY - LEC', 0, 3, 3, 2.67),
 (14, 'CTINASSL', 'INFORMATION ASSURANCE AND SECURITY - LAB', 1, 3, 3, 4.00),
-
 (15, 'CCNETCOL', 'NETWORK AND COMMUNICATIONS - LEC', 0, 3, 3, 2.67),
 (16, 'CCNETCOL', 'NETWORK AND COMMUNICATIONS - LAB', 1, 3, 3, 4.00),
-
 (17, 'CCCSINTX', 'INTERNSHIP (MIN. 162 HRS)', 1, 3, 4, 4.00),
-
 (18, 'CCSELE2L', 'C.S. ELECTIVE 2 - LEC', 0, 3, 4, 2.67),
 (19, 'CCSELE2L', 'C.S. ELECTIVE 2 - LAB', 1, 3, 4, 4.00),
-
 (20, 'CCFUINSY', 'FUNDAMENTALS OF INFORMATION SYSTEMS - LEC', 0, 2, 1, 2.67),
 (21, 'CCFUINSY', 'FUNDAMENTALS OF INFORMATION SYSTEMS - LAB', 1, 2, 1, 4.00),
-
 (22, 'CCPRGG2X', 'INTERMEDIATE PROGRAMMING - LEC', 0, 2, 1, 2.67),
 (23, 'CCPRG2BL', 'INTERMEDIATE PROGRAMMING - LAB', 1, 2, 1, 4.00),
-
 (24, 'CIENTARL', 'ENTERPRISE ARCHITECTURE - LEC', 0, 2, 2, 2.67),
 (25, 'CIENTARL', 'ENTERPRISE ARCHITECTURE - LAB', 1, 2, 2, 4.00),
-
 (26, 'CCSPEL2X', 'SPORTS ELECTIVE 2 (E-GAMES DESIGN II) - LEC', 0, 2, 2, 2.00),
 (27, 'CCSPEL2X', 'SPORTS ELECTIVE 2 (E-GAMES DESIGN II) - LAB', 1, 2, 2, 2.00),
-
 (28, 'CCQUAMET', 'QUANTITATIVE METHODS - LEC', 0, 2, 2, 2.67),
 (29, 'CCQUAMET', 'QUANTITATIVE METHODS - LAB', 1, 2, 2, 4.00),
-
 (30, 'BUPRDEMA', 'BUSINESS PROCESS MANAGEMENT - LEC', 0, 2, 2, 4.00),
-
 (31, 'CISECDEL', 'E-COMMERCE AND DIGITAL ENTREPRENEURSHIP - LEC', 0, 2, 3, 4.00),
-
 (32, 'CTSYSADL', 'SYSTEMS ANALYSIS AND DESIGN - LEC', 0, 2, 3, 2.67),
 (33, 'CTSYSADL', 'SYSTEMS ANALYSIS AND DESIGN - LAB', 1, 2, 3, 4.00),
-
 (34, 'CISPRMAL', 'I.S. PROJECT MANAGEMENT - LEC', 0, 2, 3, 2.67),
 (35, 'CISPRMAL', 'I.S. PROJECT MANAGEMENT - LAB', 1, 2, 3, 4.00),
-
 (36, 'CISELE1L', 'I.S. ELECTIVE 1 - LEC', 0, 2, 3, 2.67),
 (37, 'CISELE1L', 'I.S. ELECTIVE 1 - LAB', 1, 2, 3, 4.00),
-
 (38, 'CCISINTX', 'INTERNSHIP (486 HRS)', 0, 2, 4, 4.00),
-
 (39, 'INPROLA', 'INTRODUCTION TO PROGRAMMING & THEORIES - LEC', 0, 1, 1, 2.00),
 (40, 'INPROLA', 'INTRODUCTION TO PROGRAMMING & THEORIES - LAB', 1, 1, 1, 2.00),
-
 (41, 'MANPRIN', 'MANAGEMENT PRINCIPLES - LEC', 0, 1, 1, 4.00),
-
 (42, 'OPESYST', 'OPERATING SYSTEMS - LEC', 0, 1, 1, 2.00),
 (43, 'OPESYST', 'OPERATING SYSTEMS - LAB', 1, 1, 1, 2.00),
-
 (44, 'WEBPROG', 'WEB PROGRAMMING (for BSIT) - LEC', 0, 1, 2, 2.00),
 (45, 'WEBPROG', 'WEB PROGRAMMING (for BSIT) - LAB', 1, 1, 2, 2.00),
-
 (46, 'MOBPROG', 'MOBILE PROGRAMMING - LEC', 0, 1, 2, 2.00),
 (47, 'MOBPROG', 'MOBILE PROGRAMMING - LAB', 1, 1, 2, 2.00),
-
 (48, 'DATAMA2', 'DATABASE MANAGEMENT 2 and ADMINISTRATION - LEC', 0, 1, 2, 2.00),
 (49, 'DATAMA2', 'DATABASE MANAGEMENT 2 and ADMINISTRATION - LAB', 1, 1, 2, 2.00),
-
 (50, 'PEMBEDS', 'PROGRAMMING EMBEDDED SYSTEMS - LEC', 0, 1, 2, 2.00),
 (51, 'PEMBEDS', 'PROGRAMMING EMBEDDED SYSTEMS - LAB', 1, 1, 2, 2.00),
-
 (52, 'ELECTV1', 'ELECTIVE 1 - LEC', 0, 1, 2, 2.00),
 (53, 'ELECTV1', 'ELECTIVE 1 - LAB', 1, 1, 2, 2.00),
-
 (54, 'CLDCOMP', 'CLOUD COMPUTING & VIRTUALIZATION - LEC', 0, 1, 2, 2.00),
 (55, 'CLDCOMP', 'CLOUD COMPUTING & VIRTUALIZATION - LAB', 1, 1, 2, 2.00),
-
 (56, 'MCSPROJ', 'APPLIED PROJECT - SYSTEM PROTOTYPE - LEC', 0, 1, 3, 2.00),
 (57, 'MCSPROJ', 'APPLIED PROJECT - SYSTEM PROTOTYPE - LAB', 1, 1, 3, 2.00),
-
 (58, 'TENTREP', 'TECHNOPRENEURSHIP - LEC', 0, 1, 3, 4.00),
-
 (59, 'ELECTV4', 'ELECTIVE 4 - LEC', 0, 1, 3, 2.00),
 (60, 'ELECTV4', 'ELECTIVE 4 - LAB', 1, 1, 3, 2.00),
-
 (61, 'xINTERN1', 'INTERNSHIP 1', 0, 1, 4, 4.00);
-
 
 -- --------------------------------------------------------
 
@@ -237,13 +249,18 @@ CREATE TABLE `timeslots` (
   `EndTime` time NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
-INSERT INTO TimeSlots (StartTime, EndTime) VALUES
-('07:00:00', '09:00:00'),
-('09:00:00', '11:00:00'),
-('11:00:00', '13:00:00'),
-('13:00:00', '15:00:00'),
-('15:00:00', '17:00:00'),
-('17:00:00', '19:00:00');
+--
+-- Dumping data for table `timeslots`
+--
+
+INSERT INTO `timeslots` (`TimeSlotID`, `StartTime`, `EndTime`) VALUES
+(1, '07:00:00', '09:00:00'),
+(2, '09:00:00', '11:00:00'),
+(3, '11:00:00', '13:00:00'),
+(4, '13:00:00', '15:00:00'),
+(5, '15:00:00', '17:00:00'),
+(6, '17:00:00', '19:00:00'),
+(7, '19:00:00', '21:00:00');
 
 -- --------------------------------------------------------
 
@@ -342,13 +359,13 @@ ALTER TABLE `programs`
 -- AUTO_INCREMENT for table `programyearcounts`
 --
 ALTER TABLE `programyearcounts`
-  MODIFY `CountID` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `CountID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- AUTO_INCREMENT for table `rooms`
 --
 ALTER TABLE `rooms`
-  MODIFY `RoomID` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `RoomID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `schedule`
@@ -360,7 +377,7 @@ ALTER TABLE `schedule`
 -- AUTO_INCREMENT for table `sections`
 --
 ALTER TABLE `sections`
-  MODIFY `SectionID` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `SectionID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
 
 --
 -- AUTO_INCREMENT for table `term2courses`
@@ -372,7 +389,7 @@ ALTER TABLE `term2courses`
 -- AUTO_INCREMENT for table `timeslots`
 --
 ALTER TABLE `timeslots`
-  MODIFY `TimeSlotID` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `TimeSlotID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT for table `yearlevels`
