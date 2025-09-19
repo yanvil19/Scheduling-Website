@@ -37,72 +37,106 @@
 
 
 ## Algorithm
-🧩 Main Pseudo Algorithm: generateSchedule()
-
 ALGORITHM GenerateSchedule
 BEGIN
-  1. Initialize Data Structures
-     - Clear lists: sections, subjects, rooms, timeslots, schedule, unscheduled
-
-  2. Load Data
-     - CALL loadData()
-
-  3. Sort Sections by Priority
-     - Program Priority: IT (1) → IS (2) → CS (3)
-     - Year Level Priority: 4th → 3rd → 2nd → 1st
-
-  4. Initialize Conflict Tracking
-     - used = {} → "roomID-timeslotID-day"
-     - sectionSlotDayUsage = {} → "sectionID-timeslotID-day"
-     - days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-
-  5. Main Scheduling Loop
-     FOR each section
-       FOR each subject
-         - Skip if program/year mismatch
-         - IF subject.totalTime > 2.0 THEN
-             → CALL tryPlaceOnPartnerDays()
-           ELSE
-             → CALL tryPlaceOnSingleDay()
-         - IF placement fails THEN
-             → Add subject to unscheduled list
-
-  6. Display Results
-     - CALL printSchedule()
-
+    // Initialize data structures
+    Clear all lists (sections, subjects, rooms, timeslots, schedule, unscheduled)
+    
+    // Load data from database
+    CALL loadData()
+    
+    // Prioritize sections by program and year level
+    Sort sections by:
+        1. Program priority (IT=1, IS=2, CS=3)
+        2. Year level (higher years first: 4th > 3rd > 2nd > 1st)
+    
+    // Initialize conflict tracking
+    used = empty set                    // tracks "roomID-timeslotID-day" combinations
+    sectionSlotDayUsage = empty set     // tracks "sectionID-timeslotID-day" combinations
+    days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+    
+    // Main scheduling loop
+    FOR each section in sections DO
+        FOR each subject in subjects DO
+            // Filter: only schedule subjects that match section's program and year
+            IF subject.programID ≠ section.programID OR subject.yearLevel ≠ section.yearLevel THEN
+                CONTINUE to next subject
+            END IF
+            
+            placed = false
+            
+            // Determine scheduling strategy based on total time
+            IF subject.totalTime > 2.0 THEN
+                // Long courses: split across partner days
+                placed = tryPlaceOnPartnerDays(section, subject, used, sectionSlotDayUsage, days)
+            ELSE
+                // Short courses: single day scheduling
+                placed = tryPlaceOnSingleDay(section, subject, used, sectionSlotDayUsage, days)
+            END IF
+            
+            // Track unscheduled courses
+            IF NOT placed THEN
+                ADD "subject.code (section.name) - subject.type" to unscheduled
+            END IF
+        END FOR
+    END FOR
+    
+    // Display results
+    CALL printSchedule()
 END
 
 
 🔁 Sub-Algorithm: tryPlacePartnerDays()
 
-ALGORITHM tryPlacePartnerDays(section, subject, used, sectionSlotDayUsage, days)
+ALGORITHM tryPlaceOnPartnerDays(section, subject, used, sectionSlotDayUsage, days)
 BEGIN
-  1. Compute Session Duration
-     - hoursPerSession = subject.totalTime ÷ 2
-     - partnerPairs = ["Monday", "Tuesday", "Wednesday"]
-
-  2. Loop Through Resources
-     FOR each timeslot IN timeslots
-       FOR each room IN rooms
-         - IF room.type ≠ subject.type THEN
-             → CONTINUE
-
-         FOR each firstDay IN partnerPairs
-           - secondDay = getPartnerDay(firstDay)
-
-           - Build Conflict Keys:
-               sectionSlotDay1 = sectionID-timeslotID-firstDay
-               sectionSlotDay2 = sectionID-timeslotID-secondDay
-               roomSlotDay1 = roomID-timeslotID-firstDay
-               roomSlotDay2 = roomID-timeslotID-secondDay
-
-           - IF all keys are free THEN
-               → Create 2 schedule entries (firstDay + secondDay)
-               → Mark resources as used
-               → RETURN true
-
-  3. Placement Failed
-     - RETURN false
+    hoursPerSession = subject.totalTime / 2.0
+    partnerPairs = ["Monday", "Tuesday", "Wednesday"]  // First days of each partner pair
+    
+    FOR each timeslot in timeslots DO
+        FOR each room in rooms DO
+            // Room type validation
+            IF NOT room.typeMatches(subject) THEN
+                CONTINUE to next room
+            END IF
+            
+            FOR each firstDay in partnerPairs DO
+                secondDay = getPartnerDay(firstDay)  // Mon↔Thu, Tue↔Fri, Wed↔Sat
+                
+                // Generate conflict keys
+                sectionSlotDay1 = "section.id-timeslot.id-firstDay"
+                sectionSlotDay2 = "section.id-timeslot.id-secondDay" 
+                roomSlotDay1 = "room.id-timeslot.id-firstDay"
+                roomSlotDay2 = "room.id-timeslot.id-secondDay"
+                
+                // Check availability for both days
+                IF sectionSlotDay1 NOT IN sectionSlotDayUsage AND
+                   sectionSlotDay2 NOT IN sectionSlotDayUsage AND
+                   roomSlotDay1 NOT IN used AND
+                   roomSlotDay2 NOT IN used THEN
+                   
+                    // Create schedule entries for both days
+                    entry1 = new ScheduleEntry(section.name, subject.code, subject.name, 
+                                             subject.type, room.name, timeslot, firstDay, hoursPerSession)
+                    entry2 = new ScheduleEntry(section.name, subject.code, subject.name,
+                                             subject.type, room.name, timeslot, secondDay, hoursPerSession)
+                    
+                    ADD entry1 to schedule
+                    ADD entry2 to schedule
+                    
+                    // Mark resources as used
+                    ADD sectionSlotDay1 to sectionSlotDayUsage
+                    ADD sectionSlotDay2 to sectionSlotDayUsage
+                    ADD roomSlotDay1 to used
+                    ADD roomSlotDay2 to used
+                    
+                    RETURN true  // Successfully placed
+                END IF
+            END FOR
+        END FOR
+    END FOR
+    
+    RETURN false  // Could not place
 END
 
 
@@ -110,27 +144,37 @@ END
 
 ALGORITHM tryPlaceOnSingleDay(section, subject, used, sectionSlotDayUsage, days)
 BEGIN
-  1. Loop Through Resources
-     FOR each timeslot IN timeslots
-       FOR each room IN rooms
-         - IF room.type ≠ subject.type THEN
-             → CONTINUE
-
-         FOR each day IN days
-           - Build Conflict Keys:
-               sectionSlotDay = sectionID-timeslotID-day
-               roomSlotDay = roomID-timeslotID-day
-
-           - IF keys are free THEN
-               → Create schedule entry
-               → Mark resources as used
-               → RETURN true
-
-  2. Placement Failed
-     - RETURN false
+    FOR each timeslot in timeslots DO
+        FOR each room in rooms DO
+            // Room type validation
+            IF NOT room.typeMatches(subject) THEN
+                CONTINUE to next room
+            END IF
+            
+            FOR each day in days DO
+                // Generate conflict keys
+                sectionSlotDay = "section.id-timeslot.id-day"
+                roomSlotDay = "room.id-timeslot.id-day"
+                
+                // Check availability
+                IF sectionSlotDay NOT IN sectionSlotDayUsage AND
+                   roomSlotDay NOT IN used THEN
+                   
+                    // Create schedule entry
+                    entry = new ScheduleEntry(section.name, subject.code, subject.name,
+                                            subject.type, room.name, timeslot, day, subject.totalTime)
+                    
+                    ADD entry to schedule
+                    
+                    // Mark resources as used
+                    ADD sectionSlotDay to sectionSlotDayUsage
+                    ADD roomSlotDay to used
+                    
+                    RETURN true  // Successfully placed
+                END IF
+            END FOR
+        END FOR
+    END FOR
+    
+    RETURN false  // Could not place
 END
-
-
-
-
-
