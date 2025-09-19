@@ -15,5 +15,5 @@
 1. Open **phpMyAdmin**.
 2. Create a database (if not already created):
    ```sql
-   CREATE DATABASE coursesDB;
-3. Import term2Table.csv (path: Scheduling-Website/Database/term2Table.csv) NOTE: Add first line to columns
+   CREATE DATABASE schedulingdb;
+3. Import schedulingdb.sql into schedulingdb
