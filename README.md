@@ -69,8 +69,6 @@ BEGIN
 END
 
 
-🔀 Sub-Algorithm: tryPlaceOnPartnerDays()
-
 ALGORITHM tryPlaceOnPartnerDays(section, subject, used, sectionSlotDayUsage, days)
 BEGIN
     hoursPerSession = subject.totalTime ÷ 2
@@ -92,8 +90,9 @@ BEGIN
                     Mark resources as used
                     RETURN true
 
-RETURN false
+    RETURN false
 END
+
 
 
 📅 Sub-Algorithm: tryPlaceOnSingleDay()
@@ -113,6 +112,7 @@ BEGIN
                     Mark resources as used
                     RETURN true
 
-RETURN false
+    RETURN false
 END
+
 
