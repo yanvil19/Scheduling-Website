@@ -30,9 +30,10 @@ public class Scheduler {
         String roomName;
         String timeSlot;
         String day;
+        double duration;
 
         public ScheduleEntry(String sectionName, String subjectCode, String subjectName,
-                             String type, String roomName, String timeSlot, String day) {
+                             String type, String roomName, String timeSlot, String day, double duration) {
             this.sectionName = sectionName;
             this.subjectCode = subjectCode;
             this.subjectName = subjectName;
@@ -40,6 +41,7 @@ public class Scheduler {
             this.roomName = roomName;
             this.timeSlot = timeSlot;
             this.day = day;
+            this.duration = duration;
         }
     }
 
@@ -136,7 +138,7 @@ public class Scheduler {
                 boolean placed = false;
 
                 // Check if subject needs to be split across partner days
-                if (subject.weeklyHours > 2.0) {
+                if (subject.totalTime > 2.0) {
                     // Try to place on partner days
                     placed = tryPlaceOnPartnerDays(section, subject, used, sectionSlotDayUsage, days);
                 } else {
@@ -155,7 +157,7 @@ public class Scheduler {
 
     private boolean tryPlaceOnPartnerDays(Section section, Subject subject, Set<String> used,
                                           Set<String> sectionSlotDayUsage, String[] days) {
-        double hoursPerSession = subject.weeklyHours / 2.0;
+        double hoursPerSession = subject.totalTime / 2.0;
 
         for (Timeslot slot : timeslots) {
             for (Room room : rooms) {
@@ -181,12 +183,12 @@ public class Scheduler {
                         // Create entries for both days
                         ScheduleEntry entry1 = new ScheduleEntry(
                                 section.name, subject.code, subject.name, subject.type,
-                                room.name, slot.start + "-" + slot.end, firstDay
+                                room.name, slot.start + "-" + slot.end, firstDay, hoursPerSession
                         );
 
                         ScheduleEntry entry2 = new ScheduleEntry(
                                 section.name, subject.code, subject.name, subject.type,
-                                room.name, slot.start + "-" + slot.end, secondDay
+                                room.name, slot.start + "-" + slot.end, secondDay, hoursPerSession
                         );
 
                         schedule.add(entry1);
@@ -219,7 +221,7 @@ public class Scheduler {
                     if (!sectionSlotDayUsage.contains(sectionSlotDay) && !used.contains(roomSlotDay)) {
                         ScheduleEntry entry = new ScheduleEntry(
                                 section.name, subject.code, subject.name, subject.type,
-                                room.name, slot.start + "-" + slot.end, day
+                                room.name, slot.start + "-" + slot.end, day, subject.totalTime
                         );
 
                         schedule.add(entry);
@@ -255,10 +257,10 @@ public class Scheduler {
 
     private void printSchedule() {
         System.out.println("\n📅 GENERATED SCHEDULE:");
-        System.out.println("====================================================================================================================================================");
-        System.out.printf("%-12s | %-12s | %-50s | %-4s | %-12s | %-15s | %-10s%n",
-                "Section", "Code", "Subject Name", "Type", "Room", "Time Slot", "Day");
-        System.out.println("====================================================================================================================================================");
+        System.out.println("=============================================================================================================================================================");
+        System.out.printf("%-12s | %-12s | %-50s | %-4s | %-12s | %-17s | %-10s | %-8s%n",
+                "Section", "Code", "Subject Name", "Type", "Room", "Time Slot", "Day", "Duration (hrs)");
+        System.out.println("=============================================================================================================================================================");
 
         // Sort schedule by section, then by day, then by time
         schedule.sort((a, b) -> {
@@ -272,14 +274,15 @@ public class Scheduler {
         });
 
         for (ScheduleEntry entry : schedule) {
-            System.out.printf("%-12s | %-12s | %-50s | %-4s | %-12s | %-15s | %-10s%n",
+            System.out.printf("%-12s | %-12s | %-50s | %-4s | %-12s | %-15s | %-10s | %-8.3f%n",
                     entry.sectionName,
                     entry.subjectCode,
                     entry.subjectName,
                     entry.type,
                     entry.roomName,
                     entry.timeSlot,
-                    entry.day);
+                    entry.day,
+                    entry.duration);
         }
 
         System.out.println("====================================================================================================================================================");
