@@ -73,19 +73,24 @@ END
 
 ALGORITHM tryPlaceOnPartnerDays(section, subject, used, sectionSlotDayUsage, days)
 BEGIN
-hoursPerSession = subject.totalTime ÷ 2
-partnerPairs = ["Monday", "Tuesday", "Wednesday"]
+    hoursPerSession = subject.totalTime ÷ 2
+    partnerPairs = ["Monday", "Tuesday", "Wednesday"]
 
-For each timeslot in timeslots
-  For each room in rooms
-    If room.type ≠ subject.type → continue
-    For each firstDay in partnerPairs
-      secondDay = getPartnerDay(firstDay)
-      Build conflict keys (sectionSlotDay1, sectionSlotDay2, roomSlotDay1, roomSlotDay2)
-      If all free →
-        Create 2 schedule entries (firstDay + secondDay)
-        Mark resources as used
-        RETURN true
+    For each timeslot in timeslots
+        For each room in rooms
+            If room.type ≠ subject.type → continue
+
+            For each firstDay in partnerPairs
+                secondDay = getPartnerDay(firstDay)
+
+                Build conflict keys:
+                    sectionSlotDay1, sectionSlotDay2
+                    roomSlotDay1, roomSlotDay2
+
+                If all free →
+                    Create 2 schedule entries (firstDay + secondDay)
+                    Mark resources as used
+                    RETURN true
 
 RETURN false
 END
@@ -95,15 +100,19 @@ END
 
 ALGORITHM tryPlaceOnSingleDay(section, subject, used, sectionSlotDayUsage, days)
 BEGIN
-For each timeslot in timeslots
-  For each room in rooms
-    If room.type ≠ subject.type → continue
-    For each day in days
-      Build conflict keys (sectionSlotDay, roomSlotDay)
-      If free →
-        Create schedule entry
-        Mark resources as used
-        RETURN true
+    For each timeslot in timeslots
+        For each room in rooms
+            If room.type ≠ subject.type → continue
+
+            For each day in days
+                Build conflict keys:
+                    sectionSlotDay, roomSlotDay
+
+                If free →
+                    Create schedule entry
+                    Mark resources as used
+                    RETURN true
 
 RETURN false
 END
+
