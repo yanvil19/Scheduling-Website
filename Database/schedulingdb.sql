@@ -83,7 +83,7 @@ INSERT INTO `programyearcounts` (`CountID`, `ProgramID`, `YearLevelID`, `Student
 CREATE TABLE `rooms` (
   `RoomID` int(11) NOT NULL,
   `RoomName` varchar(50) NOT NULL,
-  `RoomType` enum('Lecture','Lab') NOT NULL
+  `RoomType` enum('Lecture','Lab', 'Online') NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -95,7 +95,12 @@ INSERT INTO `rooms` (`RoomID`, `RoomName`, `RoomType`) VALUES
 (2, 'Room 204', 'Lecture'),
 (3, 'ComLab 1', 'Lab'),
 (4, 'ComLab 5', 'Lab'),
-(5, 'ComLab 6', 'Lab');
+(5, 'ComLab 6', 'Lab'),
+(6, 'V-Room 203', 'Online'),
+(7, 'V-Room 204', 'Online'),
+(8, 'V-ComLab 1', 'Online'),
+(9, 'V-ComLab 5', 'Online'),
+(10, 'V-ComLab 6', 'Online');
 
 -- --------------------------------------------------------
 

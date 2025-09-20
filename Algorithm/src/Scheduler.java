@@ -117,12 +117,16 @@ public class Scheduler {
 
         loadData();
 
-        // Sort sections by program priority and year level
+        // Sort sections by year level first, then by program priority
         sections.sort((a, b) -> {
+            // Primary sort: Year level (4th > 3rd > 2nd > 1st)
+            if (a.yearLevelId != b.yearLevelId) {
+                return b.yearLevelId - a.yearLevelId; // Higher year first
+            }
+            // Secondary sort: Program priority within same year level
             int progPriorityA = getProgramPriority(a.programId);
             int progPriorityB = getProgramPriority(b.programId);
-            if (progPriorityA != progPriorityB) return progPriorityA - progPriorityB;
-            return b.yearLevelId - a.yearLevelId; // Higher year first
+            return progPriorityA - progPriorityB;
         });
 
         Set<String> used = new HashSet<>(); // room+slot+day usage
