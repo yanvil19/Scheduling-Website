@@ -190,43 +190,37 @@ public class Scheduler {
             // Clear existing schedule data
             conn.createStatement().executeUpdate("DELETE FROM schedule");
 
-            // Prepare insert statement
+            // Prepare insert statement with duration_id and day_id
             String insertQuery = """
-                INSERT INTO schedule (SectionID, SubjectID, RoomID, TimeSlotID) 
-                VALUES (?, ?, ?, ?)
-                """;
+            INSERT INTO schedule (SectionID, SubjectID, RoomID, TimeSlotID, duration_id, day_id) 
+            VALUES (?, ?, ?, ?, ?, ?)
+            """;
 
             PreparedStatement ps = conn.prepareStatement(insertQuery);
             int savedCount = 0;
 
             for (ScheduleEntry entry : schedule) {
-                // Skip online entries as they don't have physical room IDs
-                if (entry.roomName.equals("Online")) {
-                    continue;
-                }
+                if (entry.roomName.equals("Online")) continue; // skip virtual sessions
 
                 try {
-                    // Get SectionID
                     int sectionId = getSectionId(conn, entry.sectionName);
-                    if (sectionId == -1) continue;
-
-                    // Get SubjectID
                     int subjectId = getSubjectId(conn, entry.subjectCode, entry.type);
-                    if (subjectId == -1) continue;
-
-                    // Get RoomID
                     int roomId = getRoomId(conn, entry.roomName);
-                    if (roomId == -1) continue;
-
-                    // Get TimeSlotID
                     int timeSlotId = getTimeSlotId(conn, entry.timeSlot);
-                    if (timeSlotId == -1) continue;
+                    int durationId = getDurationId(conn, entry.duration);
+                    int dayId = getDayId(conn, entry.day);
 
-                    // Insert schedule entry
+                    if (sectionId == -1 || subjectId == -1 || roomId == -1 ||
+                            timeSlotId == -1 || durationId == -1 || dayId == -1) {
+                        continue; // skip invalid
+                    }
+
                     ps.setInt(1, sectionId);
                     ps.setInt(2, subjectId);
                     ps.setInt(3, roomId);
                     ps.setInt(4, timeSlotId);
+                    ps.setInt(5, durationId);
+                    ps.setInt(6, dayId);
 
                     ps.executeUpdate();
                     savedCount++;
@@ -244,6 +238,27 @@ public class Scheduler {
             e.printStackTrace();
         }
     }
+
+    private int getDurationId(Connection conn, double duration) throws SQLException {
+        PreparedStatement ps = conn.prepareStatement("SELECT duration_id FROM duration_table WHERE duration = ?");
+        ps.setDouble(1, duration);
+        ResultSet rs = ps.executeQuery();
+        if (rs.next()) {
+            return rs.getInt("duration_id");
+        }
+        return -1;
+    }
+
+    private int getDayId(Connection conn, String day) throws SQLException {
+        PreparedStatement ps = conn.prepareStatement("SELECT day_id FROM days_table WHERE day = ?");
+        ps.setString(1, day);
+        ResultSet rs = ps.executeQuery();
+        if (rs.next()) {
+            return rs.getInt("day_id");
+        }
+        return -1;
+    }
+
 
     private int getSectionId(Connection conn, String sectionName) throws SQLException {
         PreparedStatement ps = conn.prepareStatement("SELECT SectionID FROM sections WHERE SectionName = ?");

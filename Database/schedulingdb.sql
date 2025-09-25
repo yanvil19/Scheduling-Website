@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3307
--- Generation Time: Sep 19, 2025 at 09:24 AM
+-- Generation Time: Sep 25, 2025 at 02:38 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -20,6 +20,48 @@ SET time_zone = "+00:00";
 --
 -- Database: `schedulingdb`
 --
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `days_table`
+--
+
+CREATE TABLE `days_table` (
+  `day_id` int(255) NOT NULL,
+  `day` varchar(255) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `days_table`
+--
+
+INSERT INTO `days_table` (`day_id`, `day`) VALUES
+(1, 'Monday'),
+(2, 'Tuesday'),
+(3, 'Wednesday'),
+(4, 'Thursday'),
+(5, 'Friday'),
+(6, 'Saturday');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `duration_table`
+--
+
+CREATE TABLE `duration_table` (
+  `duration_id` int(255) NOT NULL,
+  `duration` decimal(10,3) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `duration_table`
+--
+
+INSERT INTO `duration_table` (`duration_id`, `duration`) VALUES
+(1, 1.335),
+(2, 2.000);
 
 -- --------------------------------------------------------
 
@@ -61,18 +103,18 @@ CREATE TABLE `programyearcounts` (
 --
 
 INSERT INTO `programyearcounts` (`CountID`, `ProgramID`, `YearLevelID`, `StudentCount`) VALUES
-(1, 1, 4, 41),
-(2, 1, 3, 41),
-(3, 1, 2, 41),
-(4, 1, 1, 41),
-(5, 2, 4, 41),
-(6, 2, 3, 41),
-(7, 2, 2, 41),
-(8, 2, 1, 41),
-(9, 3, 4, 41),
-(10, 3, 3, 41),
-(11, 3, 2, 41),
-(12, 3, 1, 41);
+(1, 1, 4, 80),
+(2, 1, 3, 80),
+(3, 1, 2, 80),
+(4, 1, 1, 80),
+(5, 2, 4, 40),
+(6, 2, 3, 40),
+(7, 2, 2, 40),
+(8, 2, 1, 40),
+(9, 3, 4, 80),
+(10, 3, 3, 80),
+(11, 3, 2, 80),
+(12, 3, 1, 80);
 
 -- --------------------------------------------------------
 
@@ -83,7 +125,7 @@ INSERT INTO `programyearcounts` (`CountID`, `ProgramID`, `YearLevelID`, `Student
 CREATE TABLE `rooms` (
   `RoomID` int(11) NOT NULL,
   `RoomName` varchar(50) NOT NULL,
-  `RoomType` enum('Lecture','Lab', 'Online') NOT NULL
+  `RoomType` enum('Lecture','Lab','Online') NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -113,8 +155,162 @@ CREATE TABLE `schedule` (
   `SectionID` int(11) NOT NULL,
   `SubjectID` int(11) NOT NULL,
   `RoomID` int(11) NOT NULL,
-  `TimeSlotID` int(11) NOT NULL
+  `TimeSlotID` int(11) NOT NULL,
+  `day_id` int(11) NOT NULL,
+  `duration_id` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `schedule`
+--
+
+INSERT INTO `schedule` (`ScheduleID`, `SectionID`, `SubjectID`, `RoomID`, `TimeSlotID`, `day_id`, `duration_id`) VALUES
+(1, 7, 39, 1, 1, 1, 2),
+(2, 7, 40, 3, 1, 2, 2),
+(3, 7, 41, 1, 1, 3, 2),
+(4, 7, 42, 1, 1, 4, 2),
+(5, 7, 43, 3, 1, 5, 2),
+(6, 8, 39, 1, 1, 2, 2),
+(7, 8, 40, 3, 1, 1, 2),
+(8, 8, 41, 2, 1, 3, 2),
+(9, 8, 42, 1, 1, 5, 2),
+(10, 8, 43, 3, 1, 4, 2),
+(11, 12, 20, 2, 1, 1, 1),
+(12, 12, 21, 4, 1, 2, 2),
+(13, 12, 3, 1, 2, 1, 1),
+(14, 12, 4, 3, 1, 3, 2),
+(15, 19, 1, 2, 1, 2, 1),
+(16, 19, 2, 4, 1, 1, 2),
+(17, 19, 3, 2, 2, 1, 1),
+(18, 19, 4, 4, 1, 3, 2),
+(19, 20, 1, 1, 2, 2, 1),
+(20, 20, 2, 5, 1, 1, 2),
+(21, 20, 3, 1, 2, 3, 1),
+(22, 20, 4, 5, 1, 2, 2),
+(23, 5, 44, 1, 1, 6, 2),
+(24, 5, 45, 4, 1, 4, 2),
+(25, 5, 46, 2, 1, 5, 2),
+(26, 5, 47, 5, 1, 3, 2),
+(27, 5, 48, 1, 2, 4, 2),
+(28, 5, 49, 3, 2, 1, 2),
+(29, 5, 50, 1, 2, 5, 2),
+(30, 5, 51, 3, 2, 2, 2),
+(31, 5, 52, 1, 2, 6, 2),
+(32, 5, 53, 3, 2, 3, 2),
+(33, 5, 54, 1, 3, 1, 2),
+(34, 5, 55, 3, 3, 2, 2),
+(35, 6, 44, 2, 1, 4, 2),
+(36, 6, 45, 3, 1, 6, 2),
+(37, 6, 46, 2, 2, 2, 2),
+(38, 6, 47, 4, 1, 5, 2),
+(39, 6, 48, 2, 2, 3, 2),
+(40, 6, 49, 3, 2, 4, 2),
+(41, 6, 50, 2, 2, 5, 2),
+(42, 6, 51, 3, 2, 6, 2),
+(43, 6, 52, 1, 3, 2, 2),
+(44, 6, 53, 4, 2, 1, 2),
+(45, 6, 54, 1, 3, 3, 2),
+(46, 6, 55, 3, 3, 1, 2),
+(47, 11, 24, 2, 3, 1, 1),
+(48, 11, 24, 2, 3, 4, 1),
+(49, 11, 25, 4, 2, 2, 2),
+(50, 11, 25, 4, 2, 5, 2),
+(51, 11, 9, 2, 1, 6, 2),
+(52, 11, 10, 5, 1, 4, 2),
+(53, 11, 28, 2, 3, 2, 1),
+(54, 11, 28, 2, 3, 5, 1),
+(55, 11, 29, 4, 2, 3, 2),
+(56, 11, 29, 4, 2, 6, 2),
+(57, 11, 30, 2, 3, 3, 2),
+(58, 11, 30, 2, 3, 6, 2),
+(59, 17, 5, 1, 4, 1, 1),
+(60, 17, 5, 1, 4, 4, 1),
+(61, 17, 6, 5, 2, 1, 2),
+(62, 17, 6, 5, 2, 4, 2),
+(63, 17, 7, 1, 4, 2, 1),
+(64, 17, 7, 1, 4, 5, 1),
+(65, 17, 8, 5, 2, 2, 2),
+(66, 17, 8, 5, 2, 5, 2),
+(67, 17, 9, 2, 2, 6, 2),
+(68, 17, 10, 4, 1, 6, 2),
+(69, 18, 5, 1, 4, 3, 1),
+(70, 18, 5, 1, 4, 6, 1),
+(71, 18, 6, 5, 2, 3, 2),
+(72, 18, 6, 5, 2, 6, 2),
+(73, 18, 7, 2, 4, 1, 1),
+(74, 18, 7, 2, 4, 4, 1),
+(75, 18, 8, 3, 3, 3, 2),
+(76, 18, 8, 3, 3, 6, 2),
+(77, 18, 9, 2, 2, 4, 2),
+(78, 18, 10, 5, 1, 5, 2),
+(79, 3, 56, 1, 3, 4, 2),
+(80, 3, 57, 5, 1, 6, 2),
+(81, 3, 58, 2, 4, 2, 2),
+(82, 3, 58, 2, 4, 5, 2),
+(83, 3, 59, 1, 3, 5, 2),
+(84, 3, 60, 3, 2, 5, 2),
+(85, 4, 56, 1, 3, 6, 2),
+(86, 4, 57, 4, 2, 4, 2),
+(87, 4, 58, 2, 4, 3, 2),
+(88, 4, 58, 2, 4, 6, 2),
+(89, 4, 59, 1, 5, 1, 2),
+(90, 4, 60, 3, 3, 4, 2),
+(91, 10, 31, 1, 5, 2, 2),
+(92, 10, 31, 1, 5, 5, 2),
+(93, 10, 32, 1, 5, 3, 1),
+(94, 10, 32, 1, 5, 6, 1),
+(95, 10, 33, 4, 3, 1, 2),
+(96, 10, 33, 4, 3, 4, 2),
+(97, 10, 34, 2, 5, 1, 1),
+(98, 10, 34, 2, 5, 4, 1),
+(99, 10, 35, 4, 3, 2, 2),
+(100, 10, 35, 4, 3, 5, 2),
+(101, 10, 36, 1, 6, 1, 1),
+(102, 10, 36, 1, 6, 4, 1),
+(103, 10, 37, 4, 3, 3, 2),
+(104, 10, 37, 4, 3, 6, 2),
+(105, 15, 11, 2, 5, 2, 1),
+(106, 15, 11, 2, 5, 5, 1),
+(107, 15, 12, 5, 3, 1, 2),
+(108, 15, 12, 5, 3, 4, 2),
+(109, 15, 13, 2, 5, 3, 1),
+(110, 15, 13, 2, 5, 6, 1),
+(111, 15, 14, 5, 3, 2, 2),
+(112, 15, 14, 5, 3, 5, 2),
+(113, 15, 15, 1, 6, 2, 1),
+(114, 15, 15, 1, 6, 5, 1),
+(115, 15, 16, 5, 3, 3, 2),
+(116, 15, 16, 5, 3, 6, 2),
+(117, 16, 11, 1, 6, 3, 1),
+(118, 16, 11, 1, 6, 6, 1),
+(119, 16, 12, 3, 4, 1, 2),
+(120, 16, 12, 3, 4, 4, 2),
+(121, 16, 13, 2, 6, 1, 1),
+(122, 16, 13, 2, 6, 4, 1),
+(123, 16, 14, 3, 4, 2, 2),
+(124, 16, 14, 3, 4, 5, 2),
+(125, 16, 15, 2, 6, 2, 1),
+(126, 16, 15, 2, 6, 5, 1),
+(127, 16, 16, 3, 4, 3, 2),
+(128, 16, 16, 3, 4, 6, 2),
+(129, 1, 61, 2, 6, 3, 2),
+(130, 1, 61, 2, 6, 6, 2),
+(131, 2, 61, 1, 7, 1, 2),
+(132, 2, 61, 1, 7, 4, 2),
+(133, 9, 38, 1, 7, 2, 2),
+(134, 9, 38, 1, 7, 5, 2),
+(135, 13, 17, 4, 4, 1, 2),
+(136, 13, 17, 4, 4, 4, 2),
+(137, 13, 18, 1, 7, 3, 1),
+(138, 13, 18, 1, 7, 6, 1),
+(139, 13, 19, 4, 4, 2, 2),
+(140, 13, 19, 4, 4, 5, 2),
+(141, 14, 17, 4, 4, 3, 2),
+(142, 14, 17, 4, 4, 6, 2),
+(143, 14, 18, 2, 7, 1, 1),
+(144, 14, 18, 2, 7, 4, 1),
+(145, 14, 19, 5, 4, 1, 2),
+(146, 14, 19, 5, 4, 4, 2);
 
 -- --------------------------------------------------------
 
@@ -143,21 +339,17 @@ INSERT INTO `sections` (`SectionID`, `SectionName`, `ProgramID`, `YearLevelID`) 
 (7, 'BSIT251A', 1, 1),
 (8, 'BSIT251B', 1, 1),
 (9, 'BSIS221A', 2, 4),
-(10, 'BSIS221B', 2, 4),
-(11, 'BSIS231A', 2, 3),
-(12, 'BSIS231B', 2, 3),
-(13, 'BSIS241A', 2, 2),
-(14, 'BSIS241B', 2, 2),
-(15, 'BSIS251A', 2, 1),
-(16, 'BSIS251B', 2, 1),
-(17, 'BSCS221A', 3, 4),
-(18, 'BSCS221B', 3, 4),
-(19, 'BSCS231A', 3, 3),
-(20, 'BSCS231B', 3, 3),
-(21, 'BSCS241A', 3, 2),
-(22, 'BSCS241B', 3, 2),
-(23, 'BSCS251A', 3, 1),
-(24, 'BSCS251B', 3, 1);
+(10, 'BSIS231A', 2, 3),
+(11, 'BSIS241A', 2, 2),
+(12, 'BSIS251A', 2, 1),
+(13, 'BSCS221A', 3, 4),
+(14, 'BSCS221B', 3, 4),
+(15, 'BSCS231A', 3, 3),
+(16, 'BSCS231B', 3, 3),
+(17, 'BSCS241A', 3, 2),
+(18, 'BSCS241B', 3, 2),
+(19, 'BSCS251A', 3, 1),
+(20, 'BSCS251B', 3, 1);
 
 -- --------------------------------------------------------
 
@@ -293,6 +485,18 @@ INSERT INTO `yearlevels` (`YearLevelID`, `Level`) VALUES
 --
 
 --
+-- Indexes for table `days_table`
+--
+ALTER TABLE `days_table`
+  ADD PRIMARY KEY (`day_id`);
+
+--
+-- Indexes for table `duration_table`
+--
+ALTER TABLE `duration_table`
+  ADD PRIMARY KEY (`duration_id`);
+
+--
 -- Indexes for table `programs`
 --
 ALTER TABLE `programs`
@@ -320,7 +524,9 @@ ALTER TABLE `schedule`
   ADD KEY `SectionID` (`SectionID`),
   ADD KEY `SubjectID` (`SubjectID`),
   ADD KEY `RoomID` (`RoomID`),
-  ADD KEY `TimeSlotID` (`TimeSlotID`);
+  ADD KEY `TimeSlotID` (`TimeSlotID`),
+  ADD KEY `day_id` (`day_id`),
+  ADD KEY `duration_id` (`duration_id`);
 
 --
 -- Indexes for table `sections`
@@ -370,19 +576,19 @@ ALTER TABLE `programyearcounts`
 -- AUTO_INCREMENT for table `rooms`
 --
 ALTER TABLE `rooms`
-  MODIFY `RoomID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `RoomID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT for table `schedule`
 --
 ALTER TABLE `schedule`
-  MODIFY `ScheduleID` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `ScheduleID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=147;
 
 --
 -- AUTO_INCREMENT for table `sections`
 --
 ALTER TABLE `sections`
-  MODIFY `SectionID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
+  MODIFY `SectionID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
 
 --
 -- AUTO_INCREMENT for table `term2courses`
@@ -417,6 +623,8 @@ ALTER TABLE `programyearcounts`
 -- Constraints for table `schedule`
 --
 ALTER TABLE `schedule`
+  ADD CONSTRAINT `day_id` FOREIGN KEY (`day_id`) REFERENCES `days_table` (`day_id`),
+  ADD CONSTRAINT `duration_id` FOREIGN KEY (`duration_id`) REFERENCES `duration_table` (`duration_id`),
   ADD CONSTRAINT `schedule_ibfk_1` FOREIGN KEY (`SectionID`) REFERENCES `sections` (`SectionID`),
   ADD CONSTRAINT `schedule_ibfk_2` FOREIGN KEY (`SubjectID`) REFERENCES `term2courses` (`SubjectID`),
   ADD CONSTRAINT `schedule_ibfk_3` FOREIGN KEY (`RoomID`) REFERENCES `rooms` (`RoomID`),
