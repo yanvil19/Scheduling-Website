@@ -1,0 +1,105 @@
+:root {
+  /* Color Variables */
+  --light-color: #fbfdfc;
+  --main-blue: #0146c7;
+  --dark-blue: #041133;
+  --yellow: #ffd602;
+
+  /* Additional Colors (extracted from your styles) */
+  --yellow-box: #f3c33f;
+  --prof-box-blue: #34a1fe;
+  --section-box-orange: #f89724;
+  --calendar-bg: #f9f9f9;
+  --calendar-border: #cbcbcb;
+  --day-light-blue: #dfe5f1;
+  --day-medium-blue: #ced9eb;
+  --stats-frame-bg: #ecf1f7;
+  --text-dark: #041133;
+  --text-medium: #444444;
+  --text-white: #ffffff;
+  --text-black: #000000;
+
+  /* Typography Variables */
+  --header-1-font-family: "Audiowide", sans-serif;
+  --header-1-font-size: 24px;
+  --header-1-letter-spacing: -0.02em;
+  --header-1-font-weight: 400;
+
+  --header-2-font-family: "Sarala", sans-serif;
+  --header-2-font-size: 20px;
+  --header-2-letter-spacing: -0.02em;
+  --header-2-font-weight: 700;
+
+  --body-font-family: "Sarala", sans-serif;
+  --body-font-size: 11px;
+  --body-line-height: 13px;
+  --body-letter-spacing: -0.02em;
+  --body-font-weight: 400;
+
+  --logo-sub-texts-font-family: "Sarala", sans-serif;
+  --logo-sub-texts-font-size: 10px;
+  --logo-sub-texts-font-weight: 400;
+
+  /* Additional Typography (from calendar and stats) */
+  --calendar-day-font-family: "Poppins", sans-serif;
+  --calendar-day-font-size: 14.252100944519043px;
+  --calendar-day-letter-spacing: -0.02em;
+  --calendar-day-font-weight: 700;
+
+  --stats-bold-font-family: "Sarala", sans-serif;
+  --stats-bold-font-size-large: 30px;
+  --stats-bold-font-size-medium: 20px;
+  --stats-bold-font-size-small: 17px;
+  --stats-bold-line-height-large: 25.67px;
+  --stats-bold-line-height-medium: 15px;
+  --stats-bold-line-height-small: 20.09px;
+  --stats-bold-letter-spacing: -0.02em;
+  --stats-bold-font-weight: 700;
+
+  /* Layout Variables */
+  --navbar-width: 320px;
+  --navbar-height: 864px;
+  --navbar-highlight-width: 319px;
+  --navbar-highlight-height: 64px;
+  --navbar-highlight-border-radius: 0px 70px 70px 0px;
+
+  --box-width: 361px;
+  --box-height: 211px;
+  --box-border-radius: 20px;
+
+  --button-border-radius: 5px;
+  --button-border-width: 2px;
+  --button-width: 74px;
+  --button-height: 25px;
+
+  --calendar-width: 750px;
+  --calendar-height: 520px;
+  --calendar-template-width: 600.01px;
+  --calendar-template-height: 424px;
+  --calendar-template-border-radius: 3.56px;
+
+  --stats-frame-border-radius: 15px;
+  --stats-frame-border-width: 3px;
+
+  /* Spacing Variables */
+  --section-top-spacing: 74px;
+  --calendar-top-spacing: 319px;
+  --stats-top-spacing: 319px;
+
+  /* Shadow Variables */
+  --calendar-header-shadow: 0px 54.16px 2.85px 0px rgba(0, 0, 0, 0.25);
+
+  /* Icon Sizes */
+  --nav-icon-size: 25.38px;
+  --prof-icon-large: 146px;
+  --logo-icon-width: 62.09px;
+  --logo-icon-height: 62.07px;
+  --profile-avatar-size: 43px;
+
+  /* Calendar Specific */
+  --calendar-day-width: 85.11px;
+  --calendar-divider-width: 0.71px;
+  --calendar-week-day-height: 85.72px;
+  --calendar-day-padding: 7.13px;
+  --calendar-text-margin: 5.7px;
+}
