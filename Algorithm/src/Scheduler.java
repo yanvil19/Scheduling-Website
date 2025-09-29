@@ -2,13 +2,13 @@ import java.sql.*;
 import java.util.*;
 
 public class Scheduler {
-    private List<Section> sections = new ArrayList<>();
-    private List<Subject> subjects = new ArrayList<>();
-    private List<Room> rooms = new ArrayList<>();
-    private List<Timeslot> timeslots = new ArrayList<>();
+    public List<Section> sections = new ArrayList<>();
+    public List<Subject> subjects = new ArrayList<>();
+    public List<Room> rooms = new ArrayList<>();
+    public List<Timeslot> timeslots = new ArrayList<>();
 
-    private List<ScheduleEntry> schedule = new ArrayList<>();
-    private List<String> unscheduled = new ArrayList<>();
+    List<ScheduleEntry> schedule = new ArrayList<>();
+    List<String> unscheduled = new ArrayList<>();
 
     // Partner day mappings
     private static final Map<String, String> PARTNER_DAYS = new HashMap<>();
@@ -45,6 +45,7 @@ public class Scheduler {
         }
     }
 
+    // ### Main Entry Points ###
     public void loadData() {
         try (Connection conn = JDBC.getConnection()) {
             if (conn == null) {
@@ -129,6 +130,7 @@ public class Scheduler {
             return progPriorityA - progPriorityB;
         });
 
+        // Trackers for handling conflicts
         Set<String> used = new HashSet<>(); // room+slot+day usage
         Set<String> sectionSlotDayUsage = new HashSet<>(); // section+slot+day usage
 
@@ -136,36 +138,26 @@ public class Scheduler {
 
         for (Section section : sections) {
             for (Subject subject : subjects) {
+                // Match section and subject by program and year level
                 if (!Objects.equals(section.programId, subject.programId)) continue;
                 if (section.yearLevelId != subject.yearLevelId) continue;
 
-                boolean placed = false;
+                boolean placed;
+                double totalTime = subject.totalTime;
+                int year = section.yearLevelId;
 
-                // Special handling for Year 1 courses
-                if (section.yearLevelId == 1) {
-                    if (subject.totalTime < 2.0) {
-                        // Hybrid scheduling: one physical session + one online session on partner days
-                        placed = tryPlaceHybridSchedule(section, subject, used, sectionSlotDayUsage, days);
-                    } else if (subject.totalTime > 2.0) {
-                        // Split across partner days: physical + virtual
-                        placed = tryPlaceYear1PartnerDays(section, subject, used, sectionSlotDayUsage, days);
-                    } else {
-                        // Regular single day scheduling (totalTime == 2.0)
+                if (year == 1) {
+                    if (totalTime <= 2.0) {
                         placed = tryPlaceOnSingleDay(section, subject, used, sectionSlotDayUsage, days);
+                    } else {
+                        placed = tryPlaceYear1SplitHybrid(section, subject, used, sectionSlotDayUsage);
                     }
-                }
-                // Special handling for Year 2 courses with totalTime < 2
-                else if (section.yearLevelId == 2 && subject.totalTime < 2.0) {
-                    // Hybrid scheduling: one physical session + one online session on partner days
-                    placed = tryPlaceHybridSchedule(section, subject, used, sectionSlotDayUsage, days);
-                }
-                // Regular scheduling for all other cases
-                else if (subject.totalTime > 2.0) {
-                    // Long courses: split across partner days (both physical)
-                    placed = tryPlaceOnPartnerDays(section, subject, used, sectionSlotDayUsage, days);
                 } else {
-                    // Regular single day scheduling (physical only)
-                    placed = tryPlaceOnSingleDay(section, subject, used, sectionSlotDayUsage, days);
+                    if (totalTime <= 2.0) {
+                        placed = tryPlaceOnSingleDay(section, subject, used, sectionSlotDayUsage, days);
+                    } else {
+                        placed = tryPlaceSplitSession(section, subject, used, sectionSlotDayUsage);
+                    }
                 }
 
                 if (!placed) {
@@ -173,14 +165,9 @@ public class Scheduler {
                 }
             }
         }
-
-        // Save schedule to database
-        saveScheduleToDatabase();
-
-        printSchedule();
     }
 
-    private void saveScheduleToDatabase() {
+    public void saveScheduleToDatabase() {
         try (Connection conn = JDBC.getConnection()) {
             if (conn == null) {
                 System.out.println("❌ Database connection failed! Cannot save schedule.");
@@ -239,16 +226,167 @@ public class Scheduler {
         }
     }
 
-    private int getDurationId(Connection conn, double duration) throws SQLException {
-        PreparedStatement ps = conn.prepareStatement("SELECT duration_id FROM duration_table WHERE duration = ?");
-        ps.setDouble(1, duration);
-        ResultSet rs = ps.executeQuery();
-        if (rs.next()) {
-            return rs.getInt("duration_id");
+    // ### Core Scheduling Logic ###
+    private boolean tryPlaceSplitSession(Section section, Subject subject, Set<String> used,
+                                         Set<String> sectionSlotDayUsage) {
+        double hoursPerSession = subject.totalTime / 2.0;
+        boolean isYear1 = section.yearLevelId == 1;
+
+        for (Timeslot slot : timeslots) {
+            String[] partnerPairs = {"Monday", "Tuesday", "Wednesday"};
+
+            for (String firstDay : partnerPairs) {
+                String secondDay = PARTNER_DAYS.get(firstDay);
+
+                String sectionSlotDay1 = section.id + "-" + slot.id + "-" + firstDay;
+                String sectionSlotDay2 = section.id + "-" + slot.id + "-" + secondDay;
+
+                if (!sectionSlotDayUsage.contains(sectionSlotDay1) &&
+                        !sectionSlotDayUsage.contains(sectionSlotDay2)) {
+
+                    ScheduleEntry entry1, entry2;
+
+                    if (isYear1) {
+                        entry1 = new ScheduleEntry(section.name, subject.code, subject.name, subject.type,
+                                "Online", slot.start + "-" + slot.end, firstDay, hoursPerSession);
+                        entry2 = new ScheduleEntry(section.name, subject.code, subject.name, subject.type,
+                                "Online", slot.start + "-" + slot.end, secondDay, hoursPerSession);
+                    } else {
+                        Room room1 = findAvailablePhysicalRoom(subject, slot, firstDay, used);
+                        Room room2 = findAvailablePhysicalRoom(subject, slot, secondDay, used);
+                        if (room1 == null || room2 == null) continue;
+
+                        String roomSlotDay1 = room1.id + "-" + slot.id + "-" + firstDay;
+                        String roomSlotDay2 = room2.id + "-" + slot.id + "-" + secondDay;
+                        if (used.contains(roomSlotDay1) || used.contains(roomSlotDay2)) continue;
+
+                        entry1 = new ScheduleEntry(section.name, subject.code, subject.name, subject.type,
+                                room1.name, slot.start + "-" + slot.end, firstDay, hoursPerSession);
+                        entry2 = new ScheduleEntry(section.name, subject.code, subject.name, subject.type,
+                                room2.name, slot.start + "-" + slot.end, secondDay, hoursPerSession);
+
+                        used.add(roomSlotDay1);
+                        used.add(roomSlotDay2);
+                    }
+
+                    schedule.add(entry1);
+                    schedule.add(entry2);
+
+                    sectionSlotDayUsage.add(sectionSlotDay1);
+                    sectionSlotDayUsage.add(sectionSlotDay2);
+
+                    return true;
+                }
+            }
         }
-        return -1;
+        return false;
     }
 
+    private boolean tryPlaceYear1SplitHybrid(Section section, Subject subject,
+                                             Set<String> used, Set<String> sectionSlotDayUsage) {
+        double hoursPerSession = subject.totalTime / 2.0;
+
+        for (Timeslot slot : timeslots) {
+            String[] partnerPairs = {"Monday", "Tuesday", "Wednesday"};
+
+            for (String firstDay : partnerPairs) {
+                String secondDay = PARTNER_DAYS.get(firstDay);
+
+                String sectionSlotDay1 = section.id + "-" + slot.id + "-" + firstDay;
+                String sectionSlotDay2 = section.id + "-" + slot.id + "-" + secondDay;
+
+                if (sectionSlotDayUsage.contains(sectionSlotDay1) || sectionSlotDayUsage.contains(sectionSlotDay2)) continue;
+
+                for (Room room : rooms) {
+                    if (!room.typeMatches(subject)) continue;
+                    if (room.type.equalsIgnoreCase("Online")) continue;
+
+                    String roomSlotDay1 = room.id + "-" + slot.id + "-" + firstDay;
+                    if (used.contains(roomSlotDay1)) continue;
+
+                    ScheduleEntry f2fEntry = new ScheduleEntry(
+                            section.name, subject.code, subject.name, subject.type,
+                            room.name, slot.start + "-" + slot.end, firstDay, hoursPerSession
+                    );
+
+                    ScheduleEntry onlineEntry = new ScheduleEntry(
+                            section.name, subject.code, subject.name, subject.type,
+                            "Online", slot.start + "-" + slot.end, secondDay, hoursPerSession
+                    );
+
+                    schedule.add(f2fEntry);
+                    schedule.add(onlineEntry);
+
+                    sectionSlotDayUsage.add(sectionSlotDay1);
+                    sectionSlotDayUsage.add(sectionSlotDay2);
+                    used.add(roomSlotDay1);
+
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private boolean tryPlaceOnSingleDay(Section section, Subject subject, Set<String> used,
+                                        Set<String> sectionSlotDayUsage, String[] days) {
+        boolean isYear1 = section.yearLevelId == 1;
+
+        for (Timeslot slot : timeslots) {
+            for (String day : days) {
+                String sectionSlotDay = section.id + "-" + slot.id + "-" + day;
+
+                if (sectionSlotDayUsage.contains(sectionSlotDay)) continue;
+
+                if (isYear1) {
+                    ScheduleEntry entry = new ScheduleEntry(
+                            section.name, subject.code, subject.name, subject.type,
+                            "Online", slot.start + "-" + slot.end, day, subject.totalTime
+                    );
+
+                    schedule.add(entry);
+                    sectionSlotDayUsage.add(sectionSlotDay);
+                    return true;
+                }
+
+                for (Room room : rooms) {
+                    if (!room.typeMatches(subject)) continue;
+                    if ((section.yearLevelId >= 3) && room.type.equalsIgnoreCase("Online")) continue;
+
+                    String roomSlotDay = room.id + "-" + slot.id + "-" + day;
+                    if (used.contains(roomSlotDay)) continue;
+
+                    ScheduleEntry entry = new ScheduleEntry(
+                            section.name, subject.code, subject.name, subject.type,
+                            room.name, slot.start + "-" + slot.end, day, subject.totalTime
+                    );
+
+                    schedule.add(entry);
+                    sectionSlotDayUsage.add(sectionSlotDay);
+                    used.add(roomSlotDay);
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private Room findAvailablePhysicalRoom(Subject subject, Timeslot slot, String day, Set<String> used) {
+        for (Room room : rooms) {
+            if (!room.typeMatches(subject)) continue;
+
+            // Only use physical rooms (not virtual/online ones)
+            if (room.type.equalsIgnoreCase("Online")) continue;
+
+            String roomSlotDay = room.id + "-" + slot.id + "-" + day;
+            if (!used.contains(roomSlotDay)) {
+                return room;
+            }
+        }
+        return null;
+    }
+
+    // ### Database Helper Methods ###
     private int getDayId(Connection conn, String day) throws SQLException {
         PreparedStatement ps = conn.prepareStatement("SELECT day_id FROM days_table WHERE day = ?");
         ps.setString(1, day);
@@ -259,6 +397,24 @@ public class Scheduler {
         return -1;
     }
 
+    private int getProgramPriority(int programId) {
+        try (Connection conn = JDBC.getConnection()) {
+            PreparedStatement ps = conn.prepareStatement("SELECT Code FROM programs WHERE ProgramID=?");
+            ps.setInt(1, programId);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                String code = rs.getString("Code");
+                switch (code) {
+                    case "IT": return 1;
+                    case "IS": return 2;
+                    case "CS": return 3;
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return 99; // fallback (lowest priority)
+    }
 
     private int getSectionId(Connection conn, String sectionName) throws SQLException {
         PreparedStatement ps = conn.prepareStatement("SELECT SectionID FROM sections WHERE SectionName = ?");
@@ -325,318 +481,14 @@ public class Scheduler {
         return -1;
     }
 
-    private boolean tryPlaceHybridSchedule(Section section, Subject subject, Set<String> used,
-                                           Set<String> sectionSlotDayUsage, String[] days) {
-        // For 1st and 2nd year courses with totalTime < 2:
-        // One physical session + one online session on partner days
-
-        for (Timeslot slot : timeslots) {
-            // Try each partner day pair
-            String[] partnerPairs = {"Monday", "Tuesday", "Wednesday"};
-
-            for (String firstDay : partnerPairs) {
-                String secondDay = PARTNER_DAYS.get(firstDay);
-
-                String sectionSlotDay1 = section.id + "-" + slot.id + "-" + firstDay;
-                String sectionSlotDay2 = section.id + "-" + slot.id + "-" + secondDay;
-
-                // Check if both days are available for the section
-                if (!sectionSlotDayUsage.contains(sectionSlotDay1) &&
-                        !sectionSlotDayUsage.contains(sectionSlotDay2)) {
-
-                    // Try to place physical session first
-                    Room physicalRoom = findAvailablePhysicalRoom(subject, slot, firstDay, used);
-
-                    if (physicalRoom != null) {
-                        String roomSlotDay1 = physicalRoom.id + "-" + slot.id + "-" + firstDay;
-
-                        // Create physical session entry
-                        ScheduleEntry physicalEntry = new ScheduleEntry(
-                                section.name, subject.code, subject.name, subject.type,
-                                physicalRoom.name, slot.start + "-" + slot.end, firstDay, subject.totalTime
-                        );
-
-                        // Create online session entry for partner day
-                        ScheduleEntry onlineEntry = new ScheduleEntry(
-                                section.name, subject.code, subject.name, subject.type,
-                                "Online", slot.start + "-" + slot.end, secondDay, subject.totalTime
-                        );
-
-                        schedule.add(physicalEntry);
-                        schedule.add(onlineEntry);
-
-                        // Mark resources as used
-                        sectionSlotDayUsage.add(sectionSlotDay1);
-                        sectionSlotDayUsage.add(sectionSlotDay2);
-                        used.add(roomSlotDay1);
-                        // Online sessions don't consume physical room resources
-
-                        return true;
-                    }
-                }
-            }
+    private int getDurationId(Connection conn, double duration) throws SQLException {
+        PreparedStatement ps = conn.prepareStatement("SELECT duration_id FROM duration_table WHERE duration = ?");
+        ps.setDouble(1, duration);
+        ResultSet rs = ps.executeQuery();
+        if (rs.next()) {
+            return rs.getInt("duration_id");
         }
-        return false;
+        return -1;
     }
 
-    private boolean tryPlaceYear1PartnerDays(Section section, Subject subject, Set<String> used,
-                                             Set<String> sectionSlotDayUsage, String[] days) {
-        // For Year 1 courses with totalTime > 2:
-        // Split in half: physical session + virtual session on partner days
-        double hoursPerSession = subject.totalTime / 2.0;
-
-        for (Timeslot slot : timeslots) {
-            // Try each partner day pair
-            String[] partnerPairs = {"Monday", "Tuesday", "Wednesday"};
-
-            for (String firstDay : partnerPairs) {
-                String secondDay = PARTNER_DAYS.get(firstDay);
-
-                String sectionSlotDay1 = section.id + "-" + slot.id + "-" + firstDay;
-                String sectionSlotDay2 = section.id + "-" + slot.id + "-" + secondDay;
-
-                // Check if both days are available for the section
-                if (!sectionSlotDayUsage.contains(sectionSlotDay1) &&
-                        !sectionSlotDayUsage.contains(sectionSlotDay2)) {
-
-                    // Try to place physical session first
-                    Room physicalRoom = findAvailablePhysicalRoom(subject, slot, firstDay, used);
-
-                    if (physicalRoom != null) {
-                        String roomSlotDay1 = physicalRoom.id + "-" + slot.id + "-" + firstDay;
-
-                        // Create physical session entry (first half)
-                        ScheduleEntry physicalEntry = new ScheduleEntry(
-                                section.name, subject.code, subject.name, subject.type,
-                                physicalRoom.name, slot.start + "-" + slot.end, firstDay, hoursPerSession
-                        );
-
-                        // Create virtual session entry for partner day (second half)
-                        ScheduleEntry virtualEntry = new ScheduleEntry(
-                                section.name, subject.code, subject.name, subject.type,
-                                "Online", slot.start + "-" + slot.end, secondDay, hoursPerSession
-                        );
-
-                        schedule.add(physicalEntry);
-                        schedule.add(virtualEntry);
-
-                        // Mark resources as used
-                        sectionSlotDayUsage.add(sectionSlotDay1);
-                        sectionSlotDayUsage.add(sectionSlotDay2);
-                        used.add(roomSlotDay1);
-                        // Virtual sessions don't consume physical room resources
-
-                        return true;
-                    }
-                }
-            }
-        }
-        return false;
-    }
-
-    private boolean tryPlaceOnPartnerDays(Section section, Subject subject, Set<String> used,
-                                          Set<String> sectionSlotDayUsage, String[] days) {
-        double hoursPerSession = subject.totalTime / 2.0;
-
-        for (Timeslot slot : timeslots) {
-            for (Room room : rooms) {
-                if (!room.typeMatches(subject)) continue;
-
-                // 3rd and 4th year sections cannot use Online room types
-                if ((section.yearLevelId == 3 || section.yearLevelId == 4) &&
-                        room.type.equalsIgnoreCase("Online")) {
-                    continue;
-                }
-
-                // Try each partner day pair
-                String[] partnerPairs = {"Monday", "Tuesday", "Wednesday"};
-
-                for (String firstDay : partnerPairs) {
-                    String secondDay = PARTNER_DAYS.get(firstDay);
-
-                    String sectionSlotDay1 = section.id + "-" + slot.id + "-" + firstDay;
-                    String sectionSlotDay2 = section.id + "-" + slot.id + "-" + secondDay;
-                    String roomSlotDay1 = room.id + "-" + slot.id + "-" + firstDay;
-                    String roomSlotDay2 = room.id + "-" + slot.id + "-" + secondDay;
-
-                    // Check if both days are available
-                    if (!sectionSlotDayUsage.contains(sectionSlotDay1) &&
-                            !sectionSlotDayUsage.contains(sectionSlotDay2) &&
-                            !used.contains(roomSlotDay1) &&
-                            !used.contains(roomSlotDay2)) {
-
-                        // Create entries for both days
-                        ScheduleEntry entry1 = new ScheduleEntry(
-                                section.name, subject.code, subject.name, subject.type,
-                                room.name, slot.start + "-" + slot.end, firstDay, hoursPerSession
-                        );
-
-                        ScheduleEntry entry2 = new ScheduleEntry(
-                                section.name, subject.code, subject.name, subject.type,
-                                room.name, slot.start + "-" + slot.end, secondDay, hoursPerSession
-                        );
-
-                        schedule.add(entry1);
-                        schedule.add(entry2);
-
-                        // Mark as used
-                        sectionSlotDayUsage.add(sectionSlotDay1);
-                        sectionSlotDayUsage.add(sectionSlotDay2);
-                        used.add(roomSlotDay1);
-                        used.add(roomSlotDay2);
-
-                        return true;
-                    }
-                }
-            }
-        }
-        return false;
-    }
-
-    private boolean tryPlaceOnSingleDay(Section section, Subject subject, Set<String> used,
-                                        Set<String> sectionSlotDayUsage, String[] days) {
-        for (Timeslot slot : timeslots) {
-            for (Room room : rooms) {
-                if (!room.typeMatches(subject)) continue;
-
-                // 3rd and 4th year sections cannot use Online room types
-                if ((section.yearLevelId == 3 || section.yearLevelId == 4) &&
-                        room.type.equalsIgnoreCase("Online")) {
-                    continue;
-                }
-
-                for (String day : days) {
-                    String sectionSlotDay = section.id + "-" + slot.id + "-" + day;
-                    String roomSlotDay = room.id + "-" + slot.id + "-" + day;
-
-                    if (!sectionSlotDayUsage.contains(sectionSlotDay) && !used.contains(roomSlotDay)) {
-                        ScheduleEntry entry = new ScheduleEntry(
-                                section.name, subject.code, subject.name, subject.type,
-                                room.name, slot.start + "-" + slot.end, day, subject.totalTime
-                        );
-
-                        schedule.add(entry);
-                        sectionSlotDayUsage.add(sectionSlotDay);
-                        used.add(roomSlotDay);
-
-                        return true;
-                    }
-                }
-            }
-        }
-        return false;
-    }
-
-    private Room findAvailablePhysicalRoom(Subject subject, Timeslot slot, String day, Set<String> used) {
-        for (Room room : rooms) {
-            if (!room.typeMatches(subject)) continue;
-
-            // Only use physical rooms (not virtual/online ones)
-            if (room.type.equalsIgnoreCase("Online")) continue;
-
-            String roomSlotDay = room.id + "-" + slot.id + "-" + day;
-            if (!used.contains(roomSlotDay)) {
-                return room;
-            }
-        }
-        return null;
-    }
-
-    private int getProgramPriority(int programId) {
-        try (Connection conn = JDBC.getConnection()) {
-            PreparedStatement ps = conn.prepareStatement("SELECT Code FROM programs WHERE ProgramID=?");
-            ps.setInt(1, programId);
-            ResultSet rs = ps.executeQuery();
-            if (rs.next()) {
-                String code = rs.getString("Code");
-                switch (code) {
-                    case "IT": return 1;
-                    case "IS": return 2;
-                    case "CS": return 3;
-                }
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return 99; // fallback (lowest priority)
-    }
-
-    private void printSchedule() {
-        System.out.println("\n📅 GENERATED SCHEDULE:");
-
-        // Sort schedule by section, then by day, then by time
-        schedule.sort((a, b) -> {
-            int sectionComp = a.sectionName.compareTo(b.sectionName);
-            if (sectionComp != 0) return sectionComp;
-
-            int dayComp = getDayOrder(a.day) - getDayOrder(b.day);
-            if (dayComp != 0) return dayComp;
-
-            return a.timeSlot.compareTo(b.timeSlot);
-        });
-
-        String[] days = {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
-
-        for (String currentDay : days) {
-            // Filter entries for current day
-            List<ScheduleEntry> dayEntries = new ArrayList<>();
-            for (ScheduleEntry entry : schedule) {
-                if (entry.day.equals(currentDay)) {
-                    dayEntries.add(entry);
-                }
-            }
-
-            if (!dayEntries.isEmpty()) {
-                System.out.println("\n=============================================================================================================================================================");
-                System.out.println("                                                                    " + currentDay.toUpperCase());
-                System.out.println("=============================================================================================================================================================");
-                System.out.printf("%-12s | %-12s | %-50s | %-4s | %-12s | %-15s | %-8s%n",
-                        "Section", "Code", "Subject Name", "Type", "Room", "Time Slot", "Duration");
-                System.out.println("=============================================================================================================================================================");
-
-                for (ScheduleEntry entry : dayEntries) {
-                    System.out.printf("%-12s | %-12s | %-50s | %-4s | %-12s | %-15s | %-8.3f%n",
-                            entry.sectionName,
-                            entry.subjectCode,
-                            entry.subjectName,
-                            entry.type,
-                            entry.roomName,
-                            entry.timeSlot,
-                            entry.duration);
-                }
-                System.out.println("=============================================================================================================================================================");
-                System.out.println(currentDay + " total entries: " + dayEntries.size());
-            } else {
-                System.out.println("\n=============================================================================================================================================================");
-                System.out.println("                                                                    " + currentDay.toUpperCase());
-                System.out.println("=============================================================================================================================================================");
-                System.out.println("No classes scheduled for " + currentDay);
-                System.out.println("=============================================================================================================================================================");
-            }
-        }
-
-        System.out.println("\n📊 SUMMARY:");
-        System.out.println("Total scheduled entries: " + schedule.size());
-
-        if (!unscheduled.isEmpty()) {
-            System.out.println("\n⚠️ UNSCHEDULED COURSES:");
-            System.out.println("----------------------------------------");
-            for (String u : unscheduled) {
-                System.out.println("• " + u);
-            }
-            System.out.println("Total unscheduled: " + unscheduled.size());
-        }
-    }
-
-    private int getDayOrder(String day) {
-        switch (day) {
-            case "Monday": return 1;
-            case "Tuesday": return 2;
-            case "Wednesday": return 3;
-            case "Thursday": return 4;
-            case "Friday": return 5;
-            case "Saturday": return 6;
-            default: return 7;
-        }
-    }
 }
