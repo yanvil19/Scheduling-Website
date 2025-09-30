@@ -372,6 +372,26 @@ public class Scheduler {
 
                 if (sectionSlotDayUsage.contains(sectionSlotDay)) continue;
 
+                // ✅ Case 2: Year 1 + LAB + ≤2 hrs → Face-to-Face (room)
+                if (isYear1 && subject.totalTime <= 2.0 && subject.type.equalsIgnoreCase("LAB")) {
+                    for (Room room : rooms) {
+                        if (!room.typeMatches(subject)) continue;
+
+                        String roomSlotDay = room.id + "-" + slot.id + "-" + day;
+                        if (used.contains(roomSlotDay)) continue;
+
+                        ScheduleEntry entry = new ScheduleEntry(
+                                section.name, subject.code, subject.name, subject.type,
+                                room.name, slot.start + "-" + slot.end, day, subject.totalTime
+                        );
+
+                        schedule.add(entry);
+                        sectionSlotDayUsage.add(sectionSlotDay);
+                        used.add(roomSlotDay);
+                        return true;
+                    }
+                }
+
                 if (isYear1) {
                     ScheduleEntry entry = new ScheduleEntry(
                             section.name, subject.code, subject.name, subject.type,
