@@ -10,14 +10,19 @@
 
 ---
 
-## 🗄 Database Setup
-
+# FRONTEND
+## 🗄 What to Download???
+### PhpMyAdmin
 1. Open **phpMyAdmin**.
 2. Create a database (if not already created):
    ```sql
    CREATE DATABASE schedulingdb;
-3. Import schedulingdb.sql into schedulingdb
+3. Open Database -> then `schedulingdb.sql`
+4. From the header, click "Import" then select schedulingdb.sql into schedulingdb
 
+### VS Code
+5. Open VS Code
+6. and yeah connect connect it using php
 
 ## Commands
 

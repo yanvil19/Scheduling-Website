@@ -1,9 +1,13 @@
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.Statement;
+import java.util.*;
 
 public class Display {
 
+    // ==============================
+    // SHOW DATABASE COURSES
+    // ==============================
     public void showTerm2Courses() {
         try (Connection conn = JDBC.getConnection()) {
             if (conn == null) {
@@ -38,6 +42,87 @@ public class Display {
 
         } catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+
+    // ==============================
+    // SHOW GENERATED SCHEDULE
+    // ==============================
+    public void showSchedule(List<Scheduler.ScheduleEntry> schedule, List<String> unscheduled) {
+        System.out.println("\n📅 GENERATED SCHEDULE:");
+
+        // Sort schedule entries
+        schedule.sort((a, b) -> {
+            int sectionComp = a.sectionName.compareTo(b.sectionName);
+            if (sectionComp != 0) return sectionComp;
+
+            int dayComp = getDayOrder(a.day) - getDayOrder(b.day);
+            if (dayComp != 0) return dayComp;
+
+            return a.timeSlot.compareTo(b.timeSlot);
+        });
+
+        String[] days = {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
+
+        for (String currentDay : days) {
+            List<Scheduler.ScheduleEntry> dayEntries = new ArrayList<>();
+            for (Scheduler.ScheduleEntry entry : schedule) {
+                if (entry.day.equals(currentDay)) {
+                    dayEntries.add(entry);
+                }
+            }
+
+            System.out.println("\n=============================================================================================================================================================");
+            System.out.println("                                                                    " + currentDay.toUpperCase());
+            System.out.println("=============================================================================================================================================================");
+
+            if (!dayEntries.isEmpty()) {
+                System.out.printf("%-12s | %-12s | %-50s | %-4s | %-12s | %-15s | %-8s%n",
+                        "Section", "Code", "Subject Name", "Type", "Room", "Time Slot", "Duration");
+                System.out.println("=============================================================================================================================================================");
+                for (Scheduler.ScheduleEntry entry : dayEntries) {
+                    System.out.printf("%-12s | %-12s | %-50s | %-4s | %-12s | %-15s | %-8.3f%n",
+                            entry.sectionName,
+                            entry.subjectCode,
+                            entry.subjectName,
+                            entry.type,
+                            entry.roomName,
+                            entry.timeSlot,
+                            entry.duration);
+                }
+                System.out.println("=============================================================================================================================================================");
+                System.out.println(currentDay + " total entries: " + dayEntries.size());
+            } else {
+                System.out.println("No classes scheduled for " + currentDay);
+                System.out.println("=============================================================================================================================================================");
+            }
+        }
+
+        // Summary
+        System.out.println("\n📊 SUMMARY:");
+        System.out.println("Total scheduled entries: " + schedule.size());
+
+        if (!unscheduled.isEmpty()) {
+            System.out.println("\n⚠️ UNSCHEDULED COURSES:");
+            for (String u : unscheduled) {
+                System.out.println("• " + u);
+            }
+            System.out.println("Total unscheduled: " + unscheduled.size());
+        }
+    }
+
+    // ==============================
+    // HELPER
+    // ==============================
+    private int getDayOrder(String day) {
+        switch (day) {
+            case "Monday": return 1;
+            case "Tuesday": return 2;
+            case "Wednesday": return 3;
+            case "Thursday": return 4;
+            case "Friday": return 5;
+            case "Saturday": return 6;
+            default: return 7;
         }
     }
 }
