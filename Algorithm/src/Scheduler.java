@@ -10,6 +10,9 @@ public class Scheduler {
     List<ScheduleEntry> schedule = new ArrayList<>();
     List<String> unscheduled = new ArrayList<>();
 
+    // Timer fields
+    private long scheduleGenerationTimeNanos = 0;
+
     // Partner day mappings
     private static final Map<String, String> PARTNER_DAYS = new HashMap<>();
     static {
@@ -108,6 +111,9 @@ public class Scheduler {
     }
 
     public void generateSchedule() {
+        // Start timer
+        long startTime = System.nanoTime();
+
         // Clear previous data
         sections.clear();
         subjects.clear();
@@ -165,6 +171,15 @@ public class Scheduler {
                 }
             }
         }
+
+        // End timer and store result
+        long endTime = System.nanoTime();
+        scheduleGenerationTimeNanos = endTime - startTime;
+    }
+
+    // Getter for schedule generation time
+    public long getScheduleGenerationTimeNanos() {
+        return scheduleGenerationTimeNanos;
     }
 
     public void saveScheduleToDatabase() {
@@ -187,19 +202,29 @@ public class Scheduler {
             int savedCount = 0;
 
             for (ScheduleEntry entry : schedule) {
-                if (entry.roomName.equals("Online")) continue; // skip virtual sessions
-
                 try {
                     int sectionId = getSectionId(conn, entry.sectionName);
                     int subjectId = getSubjectId(conn, entry.subjectCode, entry.type);
-                    int roomId = getRoomId(conn, entry.roomName);
                     int timeSlotId = getTimeSlotId(conn, entry.timeSlot);
                     int durationId = getDurationId(conn, entry.duration);
                     int dayId = getDayId(conn, entry.day);
 
-                    if (sectionId == -1 || subjectId == -1 || roomId == -1 ||
-                            timeSlotId == -1 || durationId == -1 || dayId == -1) {
-                        continue; // skip invalid
+                    // For online classes, use RoomID = 6 (Virtual Room)
+                    int roomId;
+                    if (entry.roomName.equals("Online")) {
+                        roomId = 6; // Virtual Room ID
+                    } else {
+                        roomId = getRoomId(conn, entry.roomName);
+                        if (roomId == -1) {
+                            System.out.println("⚠️  Invalid room for: " + entry.sectionName + " - " + entry.subjectCode);
+                            continue;
+                        }
+                    }
+
+                    if (sectionId == -1 || subjectId == -1 || timeSlotId == -1 ||
+                            durationId == -1 || dayId == -1) {
+                        System.out.println("⚠️  Missing data for: " + entry.sectionName + " - " + entry.subjectCode);
+                        continue;
                     }
 
                     ps.setInt(1, sectionId);
@@ -220,6 +245,12 @@ public class Scheduler {
 
             System.out.println("✅ Successfully saved " + savedCount + " schedule entries to database.");
 
+            // Print timing information here
+            System.out.println("\n⏱️  Schedule Generation Time:");
+            System.out.println("   Nanoseconds: " + scheduleGenerationTimeNanos + " ns");
+            System.out.println("   Milliseconds: " + (scheduleGenerationTimeNanos / 1_000_000.0) + " ms");
+            System.out.println("   Seconds: " + (scheduleGenerationTimeNanos / 1_000_000_000.0) + " s");
+
         } catch (SQLException e) {
             System.out.println("❌ Error saving schedule to database:");
             e.printStackTrace();
@@ -227,6 +258,7 @@ public class Scheduler {
     }
 
     // ### Core Scheduling Logic ###
+    // Basically pag mahaba yung time like 4hrs per week
     private boolean tryPlaceSplitSession(Section section, Subject subject, Set<String> used,
                                          Set<String> sectionSlotDayUsage) {
         double hoursPerSession = subject.totalTime / 2.0;
@@ -282,6 +314,7 @@ public class Scheduler {
         return false;
     }
 
+    // Basically pag mahaba yung time like 4hrs per week PERO 1st year ka ahhaha
     private boolean tryPlaceYear1SplitHybrid(Section section, Subject subject,
                                              Set<String> used, Set<String> sectionSlotDayUsage) {
         double hoursPerSession = subject.totalTime / 2.0;
@@ -328,6 +361,7 @@ public class Scheduler {
         return false;
     }
 
+    // Pag 2hrs pababa ang time edi ito gagamitin
     private boolean tryPlaceOnSingleDay(Section section, Subject subject, Set<String> used,
                                         Set<String> sectionSlotDayUsage, String[] days) {
         boolean isYear1 = section.yearLevelId == 1;
