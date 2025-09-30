@@ -1,0 +1,157 @@
+document.addEventListener("DOMContentLoaded", () => {
+    const programSelect = document.getElementById("program");
+    const yearSelect = document.getElementById("year");
+    const sectionSelect = document.getElementById("section");
+    const scheduleContainer = document.getElementById("schedule-container");
+    const scheduleContent = document.getElementById("schedule-content");
+    const scheduleTitle = document.getElementById("schedule-title");
+    const loading = document.getElementById("loading");
+
+    // Load schedules
+    function loadSchedule() {
+        const program = programSelect.value;
+        const year = yearSelect.value;
+        const section = sectionSelect.value;
+
+        scheduleContent.innerHTML = "";
+        loading.style.display = "block";
+        scheduleContainer.style.display = "block";
+
+        fetch("api.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: `action=get_schedule&program=${program}&year=${year}&section=${section}`
+        })
+            .then(response => response.json())
+            .then(data => {
+                loading.style.display = "none";
+                if (data.success && data.data.length > 0) {
+                    displaySchedule(data.data);
+                } else {
+                    scheduleContent.innerHTML =
+                        "<p class='no-schedule'>No schedules found.</p>";
+                }
+            })
+            .catch(err => {
+                loading.style.display = "none";
+                scheduleContent.innerHTML =
+                    "<p class='no-schedule'>Error loading schedule.</p>";
+                console.error(err);
+            });
+    }
+
+    // Display schedules in table
+    function displaySchedule(schedules) {
+        const grouped = {};
+
+        // Group by section
+        schedules.forEach(sch => {
+            if (!grouped[sch.SectionName]) grouped[sch.SectionName] = [];
+            grouped[sch.SectionName].push(sch);
+        });
+
+        scheduleContent.innerHTML = "";
+
+        for (const [section, items] of Object.entries(grouped)) {
+            const table = buildScheduleTable(section, items);
+            scheduleContent.innerHTML += table;
+        }
+    }
+
+    // Load sections dynamically
+    function loadSections() {
+        const program = programSelect.value;
+        const year = yearSelect.value;
+
+        if (!program || !year) {
+            sectionSelect.innerHTML = `<option value="">All Sections</option>`;
+            return;
+        }
+
+        fetch("api.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: `action=get_sections&program=${program}&year=${year}`
+        })
+            .then(response => response.json())
+            .then(data => {
+                sectionSelect.innerHTML = `<option value="">All Sections</option>`;
+                if (data.length > 0) {
+                    data.forEach(sec => {
+                        const opt = document.createElement("option");
+                        opt.value = sec.name;
+                        opt.textContent = sec.name;
+                        sectionSelect.appendChild(opt);
+                    });
+                }
+            })
+            .catch(err => {
+                sectionSelect.innerHTML =
+                    `<option value="">Error loading sections</option>`;
+                console.error(err);
+            });
+    }
+
+    function buildScheduleTable(sectionName, items) {
+        const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+        const slots = [
+            "7:00 AM - 9:00 AM", "9:00 AM - 11:00 AM", "11:00 AM - 1:00 PM",
+            "1:00 PM - 3:00 PM", "3:00 PM - 5:00 PM", "5:00 PM - 7:00 PM", "7:00 PM - 9:00 PM"
+        ];
+
+        let html = `
+            <div class="section-calendar-block">
+                <div class="section-calendar-header">${sectionName}</div>
+                <table class="schedule-table">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            ${days.map(day => `<th>${day}</th>`).join("")}
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+
+        slots.forEach(slot => {
+            html += `<tr><td>${slot}</td>`;
+            days.forEach(day => {
+                const match = items.find(s =>
+                    s.DayOfWeek === day &&
+                    slot.includes(s.StartTime)
+                );
+
+                if (match) {
+                    // Determine color based on room name
+                    const isVirtual = match.RoomName && match.RoomName.toLowerCase().includes('virtual');
+                    const colorClass = isVirtual ? "online-block" : "f2f-block";
+                    
+                    html += `<td class="${colorClass}">
+                        <div class="subject-name">${match.SubjectCode}</div>
+                        <div class="subject-details">${match.SubjectName}<br>${match.RoomName}<br>${match.Type}<br>${match.Duration} hrs</div>
+                    </td>`;
+                } else {
+                    html += `<td class="empty-block"></td>`;
+                }
+            });
+            html += `</tr>`;
+        });
+
+        html += `</tbody></table></div>`;
+        return html;
+    }
+
+    // Event listeners
+    programSelect.addEventListener("change", () => {
+        loadSections();
+        loadSchedule();
+    });
+
+    yearSelect.addEventListener("change", () => {
+        loadSections();
+        loadSchedule();
+    });
+
+    sectionSelect.addEventListener("change", () => {
+        loadSchedule();
+    });
+});
