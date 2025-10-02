@@ -97,10 +97,9 @@ document.addEventListener("DOMContentLoaded", () => {
             "1:00 PM - 3:00 PM", "3:00 PM - 5:00 PM", "5:00 PM - 7:00 PM", "7:00 PM - 9:00 PM"
         ];
 
-        // ✅ Remove duplicates by creating a unique key for each schedule
+        // ✅ Remove duplicates
         const uniqueItems = [];
         const seen = new Set();
-
         items.forEach(s => {
             const key = `${s.SubjectCode}|${s.DayOfWeek}|${s.StartTime}|${s.EndTime}|${s.RoomName}|${s.Type}`;
             if (!seen.has(key)) {
@@ -126,20 +125,25 @@ document.addEventListener("DOMContentLoaded", () => {
             html += `<tr><td>${slot}</td>`;
 
             days.forEach(day => {
-                // Find exact matches for this slot/day
                 const matches = uniqueItems.filter(s =>
                     s.DayOfWeek === day &&
                     `${s.StartTime} - ${s.EndTime}` === slot
                 );
 
                 if (matches.length > 0) {
-                    html += `<td>`;
+                    html += `<td class="slot-cell">`;
                     matches.forEach(match => {
                         const isVirtual = match.RoomName && match.RoomName.toLowerCase().includes('virtual');
                         const colorClass = isVirtual ? "online-block" : "f2f-block";
 
+                        // ✅ dynamic height based on duration
+                        let heightPercent = "100%";
+                        if (parseFloat(match.Duration) <= 1.4) {
+                            heightPercent = "67%";
+                        }
+
                         html += `
-                            <div class="${colorClass}">
+                            <div class="schedule-block ${colorClass}" style="height:${heightPercent}">
                                 <div class="subject-name">${match.SubjectCode}</div>
                                 <div class="subject-details">
                                     ${match.SubjectName}<br>
@@ -163,18 +167,15 @@ document.addEventListener("DOMContentLoaded", () => {
         return html;
     }
 
-
     // Event listeners
     programSelect.addEventListener("change", () => {
         loadSections();
         loadSchedule();
     });
-
     yearSelect.addEventListener("change", () => {
         loadSections();
         loadSchedule();
     });
-
     sectionSelect.addEventListener("change", () => {
         loadSchedule();
     });

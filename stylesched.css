@@ -1,9 +1,16 @@
-/* Reset */
+/* =====================
+   RESET & GLOBAL
+===================== */
 html, body {
     margin: 0;
+    padding: 0;
+    font-family: 'Poppins', sans-serif;
+    background: #f8f9fa;
 }
 
-/* Header */
+/* =====================
+   HEADER
+===================== */
 .upper-upper-home {
     background-color: #041133;
     border-radius: 0 0 2rem 2rem;
@@ -32,7 +39,9 @@ html, body {
     color: #fff;
 }
 
-/* Main Layout */
+/* =====================
+   MAIN LAYOUT
+===================== */
 .lower-home {
     width: 100%;
     height: auto;
@@ -43,6 +52,7 @@ html, body {
     justify-content: space-between;
     align-items: center;
     width: 95%;
+    margin: 1rem auto;
 }
 
 .title {
@@ -56,13 +66,9 @@ html, body {
     gap: 15px;
 }
 
-.program, .year, .section {
-    font-family: 'Montserrat', sans-serif;
-    font-size: 0.7rem;
-    padding-top: 5%;
-}
-
-/* Dropdowns */
+/* =====================
+   DROPDOWNS
+===================== */
 .dropdown-container {
     display: flex;
     flex-direction: column;
@@ -72,6 +78,7 @@ html, body {
 .dropdown-container label {
     margin-bottom: 5px;
     font-weight: bold;
+    font-size: 0.75rem;
 }
 
 .dropdown-container select {
@@ -79,7 +86,6 @@ html, body {
     border: 2px solid #ddd;
     border-radius: 4px;
     font-size: 14px;
-    font-family: 'Poppins', sans-serif;
     background-color: white;
     cursor: pointer;
     transition: border-color 0.3s ease;
@@ -94,7 +100,9 @@ html, body {
     border-color: #999;
 }
 
-/* Schedule Container */
+/* =====================
+   SCHEDULE CONTAINER
+===================== */
 .lower-lower {
     display: flex;
     justify-content: center;
@@ -106,29 +114,31 @@ html, body {
 .schedule-container {
     width: 100%;
     background-color: #fff;
-    overflow: hidden;
     display: none;
     margin-bottom: 2rem;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
 }
 
 .schedule-header,
-.section-calendar-header,
-.single-section-header {
+.section-calendar-header {
     background-color: #041133;
     color: white;
     padding: 15px 20px;
     font-weight: 600;
     font-size: 1rem;
-    font-family: 'Montserrat', sans-serif;
     text-align: center;
+    font-family: 'Montserrat', sans-serif;
 }
 
-/* Schedule Table */
+/* =====================
+   SCHEDULE TABLE
+===================== */
 .schedule-table {
     width: 100%;
     border-collapse: collapse;
     font-size: 0.9em;
-    font-family: 'Poppins', sans-serif;
     table-layout: fixed;
 }
 
@@ -136,31 +146,34 @@ html, body {
     background-color: #0146C7;
     color: white;
     font-weight: 600;
-    font-family: 'Montserrat', sans-serif;
     padding: 12px 15px;
     text-align: center;
-    width: 14.28%; /* Equal width for each day column */
 }
 
 .schedule-table th:first-child {
-    width: 120px; /* Fixed width for time column */
+    width: 120px; /* fixed time column */
 }
 
 .schedule-table td {
-    padding: 12px 15px;
-    text-align: center;
+    position: relative; /* needed for absolute children */
     border: 1px solid #041133;
-    height: 80px;
-    vertical-align: middle;
+    height: 100px;
+    vertical-align: top;
+    padding: 0;
+    text-align: center;
+    overflow: hidden;
 }
 
 .schedule-table td:first-child {
-    text-align: center;
-    font-weight: 500;
     background-color: #f5f5f5;
+    font-weight: 500;
+    font-size: 0.85rem;
+    line-height: 1.2;
 }
 
-/* Messages */
+/* =====================
+   MESSAGES
+===================== */
 .no-schedule,
 .loading {
     text-align: center;
@@ -182,59 +195,40 @@ html, body {
     margin: 10px 0;
 }
 
-/* Calendar Grid */
-.calendar-container {
-    width: 99.8%;
-    overflow-x: auto;
-    background: white;
-    border: 2px solid #041133;
-}
-
-.calendar-grid {
-    display: grid;
-    grid-template-columns: 80px repeat(6, 1fr); /* Mon–Sat */
-    min-width: 800px;
-    font-family: 'Poppins', sans-serif;
-}
-
-.time-header,
-.day-header {
-    background-color: #0146c7;
-    border: 1px solid #041133;
-    color: white;
-    padding: 10px;
-    text-align: center;
-    font-weight: bold;
-    font-size: 14px;
-}
-
-.day-header {
-    font-size: 1rem;
-}
-
-.time-slot,
-.schedule-block,
-.empty-block {
-    border: 1px solid #041133;
-    min-height: 60px;
-    text-align: center;
-    font-size: 12px;
-    padding: 8px;
-    font-family: 'Poppins', sans-serif;
-}
-
+/* =====================
+   BLOCKS (Subjects)
+===================== */
 .schedule-block {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    padding: 6px;
+    box-sizing: border-box;
+    border-radius: 10px;
+    font-size: 0.75rem;
+    line-height: 1.2;
     display: flex;
     flex-direction: column;
     justify-content: center;
-    font-size: 11px;
-    line-height: 1.2;
+    transition: all 0.3s ease;
+}
+
+/* F2F */
+.f2f-block {
+    background-color: #cce5ff;
+    border: 1px solid #0146C7;
+}
+
+/* Online */
+.online-block {
+    background-color: #fff3cd;
+    border: 1px solid #ffc107;
 }
 
 .subject-name {
     font-weight: bold;
-    margin-bottom: 4px;
-    font-size: 0.7rem;
+    font-size: 0.8rem;
+    margin-bottom: 2px;
 }
 
 .subject-details {
@@ -242,7 +236,18 @@ html, body {
     line-height: 1.1;
 }
 
-/* Section Calendar */
+/* =====================
+   EMPTY CELLS
+===================== */
+.empty-block {
+    background-color: white;
+    height: 100%;
+    width: 100%;
+}
+
+/* =====================
+   MULTI-CALENDAR
+===================== */
 .multiple-calendars-container {
     display: flex;
     flex-direction: column;
@@ -254,33 +259,5 @@ html, body {
     border: 2px solid #041133;
     border-radius: 8px;
     overflow: hidden;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-}
-
-/* Session Types */
-.f2f-block {
-    background-color: #cce5ff !important;
-    border: 1px solid #0146C7;
-    height: 80px;
-    width: 100%;
-    padding: 12px 15px;
-    box-sizing: border-box;
-}
-
-.online-block {
-    background-color: #fff3cd !important;
-    border: 1px solid #ffc107;
-    height: 80px;
-    width: 100%;
-    padding: 12px 15px;
-    box-sizing: border-box;
-}
-
-.empty-block {
-    background-color: white;
-    border: 1px solid #041133;
-    height: 80px;
-    width: 100%;
-    padding: 12px 15px;
-    box-sizing: border-box;
+    margin-bottom: 2rem;
 }

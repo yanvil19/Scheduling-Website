@@ -23,7 +23,7 @@
         <!-- Header -->
         <div class="upper-upper-home">
             <div class="upper-home">
-                <img src="logo.png" alt="Logo" class="logo">
+                <img src="../assets/logo.png" alt="Logo" class="logo">
                 <span class="name">SigmaScheds</span>
             </div>
         </div>
