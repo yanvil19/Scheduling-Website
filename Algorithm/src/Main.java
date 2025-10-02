@@ -19,6 +19,7 @@ public class Main {
             System.out.println("3. Generate Sections");
             System.out.println("4. Generate & Display Schedule");
             System.out.println("5. Save Schedule to DB");
+            System.out.println("6. Display Room Usage by Timeslot");  // NEW OPTION
             System.out.println("0. Exit");
             System.out.print("Enter your choice: ");
 
@@ -57,6 +58,11 @@ public class Main {
                     } else {
                         sched.saveScheduleToDatabase();
                     }
+                    break;
+
+                case 6:  // NEW CASE
+                    // Display room usage by timeslot (reads from saved schedule in DB)
+                    display.displayTimeslotUsage();
                     break;
 
                 case 0:

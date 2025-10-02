@@ -2,16 +2,16 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
+header("Content-Type: application/json");
 include "config.php";
 
 $action = $_POST['action'] ?? $_GET['action'] ?? '';
 
 switch ($action) {
 
-    // ✅ Fetch schedules (filtered by program, year, section)
     case 'get_schedule':
         $program = $_POST['program'] ?? '';
-        $year = $_POST['year'] ?? '';
+        $year    = $_POST['year'] ?? '';
         $section = $_POST['section'] ?? '';
 
         $sql = "
@@ -19,8 +19,8 @@ switch ($action) {
                 p.Name AS ProgramName,
                 sec.SectionName,
                 c.SubjectCode,
-                c.SubjectName,
-                IF(c.IsLab = 1, 'LAB', 'LEC') AS Type,
+                GROUP_CONCAT(DISTINCT c.SubjectName SEPARATOR ' / ') AS SubjectName,
+                GROUP_CONCAT(DISTINCT IF(c.IsLab = 1, 'LAB', 'LEC') SEPARATOR ' / ') AS Type,
                 r.RoomName,
                 t.StartTime,
                 t.EndTime,
@@ -34,27 +34,29 @@ switch ($action) {
             JOIN timeslots t ON s.TimeSlotID = t.TimeSlotID
             JOIN days_table d ON s.day_id = d.day_id
             JOIN duration_table dur ON s.duration_id = dur.duration_id
-            WHERE 1=1
+            WHERE (? = '' OR p.Code = ?)
+            AND (? = '' OR sec.YearLevelID = ?)
+            AND (? = '' OR sec.SectionName = ?)
+            GROUP BY 
+                p.Name, sec.SectionName, c.SubjectCode, 
+                r.RoomName, t.StartTime, t.EndTime, d.day, dur.duration
+            ORDER BY sec.SectionName, d.day_id, t.StartTime
         ";
 
-        if (!empty($program)) {
-            $sql .= " AND p.Code = '" . $conn->real_escape_string($program) . "'";
-        }
-        if (!empty($year)) {
-            $sql .= " AND sec.YearLevelID = '" . $conn->real_escape_string($year) . "'";
-        }
-        if (!empty($section)) {
-            $sql .= " AND sec.SectionName = '" . $conn->real_escape_string($section) . "'";
-        }
-
-        $sql .= " ORDER BY sec.SectionName, d.day_id, t.StartTime";
-
-        $result = $conn->query($sql);
-
-        if (!$result) {
+        $stmt = $conn->prepare($sql);
+        if (!$stmt) {
             echo json_encode(["error" => $conn->error]);
             exit;
         }
+
+        $stmt->bind_param(
+            "ssssss",
+            $program, $program,
+            $year, $year,
+            $section, $section
+        );
+        $stmt->execute();
+        $result = $stmt->get_result();
 
         $schedules = [];
         while ($row = $result->fetch_assoc()) {
@@ -69,35 +71,37 @@ switch ($action) {
         ]);
         break;
 
-    // ✅ Fetch sections based on program + year
+
+    // ✅ Get sections by program + year
     case 'get_sections':
         $program = $_POST['program'] ?? '';
-        $year = $_POST['year'] ?? '';
-
-        if (empty($program) || empty($year)) {
-            echo json_encode([]);
-            exit;
-        }
+        $year    = $_POST['year'] ?? '';
 
         $sql = "
             SELECT sec.SectionID, sec.SectionName
             FROM sections sec
             JOIN programs p ON sec.ProgramID = p.ProgramID
-            WHERE p.Code = '" . $conn->real_escape_string($program) . "'
-              AND sec.YearLevelID = '" . $conn->real_escape_string($year) . "'
+            WHERE (? = '' OR p.Code = ?)
+              AND (? = '' OR sec.YearLevelID = ?)
             ORDER BY sec.SectionName
         ";
 
-        $result = $conn->query($sql);
+        $stmt = $conn->prepare($sql);
+        if (!$stmt) {
+            echo json_encode(["error" => $conn->error]);
+            exit;
+        }
+
+        $stmt->bind_param("ssss", $program, $program, $year, $year);
+        $stmt->execute();
+        $result = $stmt->get_result();
 
         $sections = [];
-        if ($result && $result->num_rows > 0) {
-            while ($row = $result->fetch_assoc()) {
-                $sections[] = [
-                    "id" => $row['SectionID'],
-                    "name" => $row['SectionName']
-                ];
-            }
+        while ($row = $result->fetch_assoc()) {
+            $sections[] = [
+                "id" => $row['SectionID'],
+                "name" => $row['SectionName']
+            ];
         }
 
         echo json_encode($sections);
@@ -106,5 +110,6 @@ switch ($action) {
     default:
         echo json_encode(["error" => "Invalid action"]);
 }
+
 $conn->close();
 ?>

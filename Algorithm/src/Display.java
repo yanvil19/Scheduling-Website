@@ -1,6 +1,4 @@
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.Statement;
+import java.sql.*;
 import java.util.*;
 
 public class Display {
@@ -108,6 +106,102 @@ public class Display {
                 System.out.println("• " + u);
             }
             System.out.println("Total unscheduled: " + unscheduled.size());
+        }
+    }
+
+    // ==============================
+    // SHOW ROOM USAGE BY TIMESLOT
+    // ==============================
+    public void displayTimeslotUsage() {
+        try (Connection conn = JDBC.getConnection()) {
+            if (conn == null) {
+                System.out.println("❌ Database connection failed!");
+                return;
+            }
+
+            String[] days = {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
+
+            for (String day : days) {
+                System.out.println("\n=============================================================================================");
+                System.out.println("                              " + day.toUpperCase());
+                System.out.println("=============================================================================================\n");
+
+                ResultSet timeslotRs = conn.createStatement().executeQuery(
+                        "SELECT TimeSlotID, StartTime, EndTime FROM timeslots ORDER BY StartTime"
+                );
+
+                while (timeslotRs.next()) {
+                    int timeslotId = timeslotRs.getInt("TimeSlotID");
+                    String startTime = timeslotRs.getString("StartTime");
+                    String endTime = timeslotRs.getString("EndTime");
+
+                    System.out.println(day + " | " + startTime + " - " + endTime);
+
+                    ResultSet roomRs = conn.createStatement().executeQuery(
+                            "SELECT RoomID, RoomName, RoomType FROM rooms WHERE RoomType != 'Online' ORDER BY RoomName"
+                    );
+
+                    while (roomRs.next()) {
+                        int roomId = roomRs.getInt("RoomID");
+                        String roomName = roomRs.getString("RoomName");
+                        String roomType = roomRs.getString("RoomType");
+
+                        PreparedStatement checkUsage = conn.prepareStatement(
+                                "SELECT sec.SectionName " +
+                                        "FROM schedule s " +
+                                        "JOIN sections sec ON s.SectionID = sec.SectionID " +
+                                        "JOIN days_table d ON s.day_id = d.day_id " +
+                                        "WHERE s.RoomID = ? AND s.TimeSlotID = ? AND d.day = ?"
+                        );
+                        checkUsage.setInt(1, roomId);
+                        checkUsage.setInt(2, timeslotId);
+                        checkUsage.setString(3, day);
+
+                        ResultSet usageRs = checkUsage.executeQuery();
+
+                        switch (roomType) {
+                            case "Lecture":
+                                if (usageRs.next()) {
+                                    String sectionName = usageRs.getString("SectionName");
+                                    System.out.println(roomName + " (" + sectionName + ")");
+                                } else {
+                                    System.out.println(roomName + " (Not Used)");
+                                }
+                                break;
+
+                            case "Laboratory":
+                                if (usageRs.next()) {
+                                    String sectionName = usageRs.getString("SectionName");
+                                    System.out.println(roomName + " (" + sectionName + ")");
+                                } else {
+                                    System.out.println(roomName + " (Not Used)");
+                                }
+                                break;
+
+                            default:
+                                if (usageRs.next()) {
+                                    String sectionName = usageRs.getString("SectionName");
+                                    System.out.println(roomName + " (" + sectionName + ")");
+                                } else {
+                                    System.out.println(roomName + " (Not Used)");
+                                }
+                                break;
+                        }
+
+                        usageRs.close();
+                        checkUsage.close();
+                    }
+
+                    roomRs.close();
+                    System.out.println();
+                }
+
+                timeslotRs.close();
+            }
+
+        } catch (SQLException e) {
+            System.out.println("❌ Error displaying timeslot usage:");
+            e.printStackTrace();
         }
     }
 

@@ -4,7 +4,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const sectionSelect = document.getElementById("section");
     const scheduleContainer = document.getElementById("schedule-container");
     const scheduleContent = document.getElementById("schedule-content");
-    const scheduleTitle = document.getElementById("schedule-title");
     const loading = document.getElementById("loading");
 
     // Load schedules
@@ -40,11 +39,9 @@ document.addEventListener("DOMContentLoaded", () => {
             });
     }
 
-    // Display schedules in table
+    // Display grouped schedules
     function displaySchedule(schedules) {
         const grouped = {};
-
-        // Group by section
         schedules.forEach(sch => {
             if (!grouped[sch.SectionName]) grouped[sch.SectionName] = [];
             grouped[sch.SectionName].push(sch);
@@ -92,12 +89,25 @@ document.addEventListener("DOMContentLoaded", () => {
             });
     }
 
+    // Build schedule table
     function buildScheduleTable(sectionName, items) {
         const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
         const slots = [
             "7:00 AM - 9:00 AM", "9:00 AM - 11:00 AM", "11:00 AM - 1:00 PM",
             "1:00 PM - 3:00 PM", "3:00 PM - 5:00 PM", "5:00 PM - 7:00 PM", "7:00 PM - 9:00 PM"
         ];
+
+        // ✅ Remove duplicates by creating a unique key for each schedule
+        const uniqueItems = [];
+        const seen = new Set();
+
+        items.forEach(s => {
+            const key = `${s.SubjectCode}|${s.DayOfWeek}|${s.StartTime}|${s.EndTime}|${s.RoomName}|${s.Type}`;
+            if (!seen.has(key)) {
+                seen.add(key);
+                uniqueItems.push(s);
+            }
+        });
 
         let html = `
             <div class="section-calendar-block">
@@ -114,31 +124,45 @@ document.addEventListener("DOMContentLoaded", () => {
 
         slots.forEach(slot => {
             html += `<tr><td>${slot}</td>`;
+
             days.forEach(day => {
-                const match = items.find(s =>
+                // Find exact matches for this slot/day
+                const matches = uniqueItems.filter(s =>
                     s.DayOfWeek === day &&
-                    slot.includes(s.StartTime)
+                    `${s.StartTime} - ${s.EndTime}` === slot
                 );
 
-                if (match) {
-                    // Determine color based on room name
-                    const isVirtual = match.RoomName && match.RoomName.toLowerCase().includes('virtual');
-                    const colorClass = isVirtual ? "online-block" : "f2f-block";
-                    
-                    html += `<td class="${colorClass}">
-                        <div class="subject-name">${match.SubjectCode}</div>
-                        <div class="subject-details">${match.SubjectName}<br>${match.RoomName}<br>${match.Type}<br>${match.Duration} hrs</div>
-                    </td>`;
+                if (matches.length > 0) {
+                    html += `<td>`;
+                    matches.forEach(match => {
+                        const isVirtual = match.RoomName && match.RoomName.toLowerCase().includes('virtual');
+                        const colorClass = isVirtual ? "online-block" : "f2f-block";
+
+                        html += `
+                            <div class="${colorClass}">
+                                <div class="subject-name">${match.SubjectCode}</div>
+                                <div class="subject-details">
+                                    ${match.SubjectName}<br>
+                                    ${match.RoomName}<br>
+                                    ${match.Type}<br>
+                                    ${match.Duration} hrs
+                                </div>
+                            </div>
+                        `;
+                    });
+                    html += `</td>`;
                 } else {
                     html += `<td class="empty-block"></td>`;
                 }
             });
+
             html += `</tr>`;
         });
 
         html += `</tbody></table></div>`;
         return html;
     }
+
 
     // Event listeners
     programSelect.addEventListener("change", () => {
