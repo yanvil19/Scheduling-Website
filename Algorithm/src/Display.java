@@ -147,9 +147,10 @@ public class Display {
                         String roomType = roomRs.getString("RoomType");
 
                         PreparedStatement checkUsage = conn.prepareStatement(
-                                "SELECT sec.SectionName " +
+                                "SELECT sec.SectionName, c.IsLab " +
                                         "FROM schedule s " +
                                         "JOIN sections sec ON s.SectionID = sec.SectionID " +
+                                        "JOIN term2courses c ON s.SubjectID = c.SubjectID " +
                                         "JOIN days_table d ON s.day_id = d.day_id " +
                                         "WHERE s.RoomID = ? AND s.TimeSlotID = ? AND d.day = ?"
                         );
@@ -163,7 +164,9 @@ public class Display {
                             case "Lecture":
                                 if (usageRs.next()) {
                                     String sectionName = usageRs.getString("SectionName");
-                                    System.out.println(roomName + " (" + sectionName + ")");
+                                    boolean isLab = usageRs.getBoolean("IsLab");
+                                    String type = isLab ? "Lab" : "Lec";
+                                    System.out.println(roomName + " (" + sectionName + " - " + type + ")");
                                 } else {
                                     System.out.println(roomName + " (Not Used)");
                                 }
@@ -172,7 +175,9 @@ public class Display {
                             case "Laboratory":
                                 if (usageRs.next()) {
                                     String sectionName = usageRs.getString("SectionName");
-                                    System.out.println(roomName + " (" + sectionName + ")");
+                                    boolean isLab = usageRs.getBoolean("IsLab");
+                                    String type = isLab ? "Lab" : "Lec";
+                                    System.out.println(roomName + " (" + sectionName + " - " + type + ")");
                                 } else {
                                     System.out.println(roomName + " (Not Used)");
                                 }
@@ -181,7 +186,9 @@ public class Display {
                             default:
                                 if (usageRs.next()) {
                                     String sectionName = usageRs.getString("SectionName");
-                                    System.out.println(roomName + " (" + sectionName + ")");
+                                    boolean isLab = usageRs.getBoolean("IsLab");
+                                    String type = isLab ? "Lab" : "Lec";
+                                    System.out.println(roomName + " (" + sectionName + " - " + type + ")");
                                 } else {
                                     System.out.println(roomName + " (Not Used)");
                                 }
