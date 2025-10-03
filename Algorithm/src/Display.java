@@ -110,7 +110,7 @@ public class Display {
     }
 
     // ==============================
-    // SHOW ROOM USAGE BY TIMESLOT
+    // SHOW ROOM USAGE BY TIMESLOT (TABLE FORMAT)
     // ==============================
     public void displayTimeslotUsage() {
         try (Connection conn = JDBC.getConnection()) {
@@ -121,11 +121,44 @@ public class Display {
 
             String[] days = {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
 
-            for (String day : days) {
-                System.out.println("\n=============================================================================================");
-                System.out.println("                              " + day.toUpperCase());
-                System.out.println("=============================================================================================\n");
+            // Get all rooms (excluding online)
+            List<RoomInfo> rooms = new ArrayList<>();
+            ResultSet roomRs = conn.createStatement().executeQuery(
+                    "SELECT RoomID, RoomName FROM rooms WHERE RoomType != 'Online' ORDER BY RoomName"
+            );
+            while (roomRs.next()) {
+                rooms.add(new RoomInfo(roomRs.getInt("RoomID"), roomRs.getString("RoomName")));
+            }
+            roomRs.close();
 
+            // Total counters for all days
+            int totalUsedSlots = 0;
+            int totalNotUsedSlots = 0;
+
+            for (String day : days) {
+                System.out.println("\n═══════════════════════════════════════════════════════════════════════════════════════════");
+                System.out.println("                                        " + day.toUpperCase());
+                System.out.println("═══════════════════════════════════════════════════════════════════════════════════════════");
+
+                // Print header
+                System.out.printf("%-20s", "Time Slot");
+                for (RoomInfo room : rooms) {
+                    System.out.printf("| %-18s", room.name);
+                }
+                System.out.println("|");
+
+                // Print separator
+                System.out.print("─────────────────────");
+                for (int i = 0; i < rooms.size(); i++) {
+                    System.out.print("─────────────────────");
+                }
+                System.out.println();
+
+                // Counters for this day
+                int dayUsedSlots = 0;
+                int dayNotUsedSlots = 0;
+
+                // Get all timeslots
                 ResultSet timeslotRs = conn.createStatement().executeQuery(
                         "SELECT TimeSlotID, StartTime, EndTime FROM timeslots ORDER BY StartTime"
                 );
@@ -135,17 +168,12 @@ public class Display {
                     String startTime = timeslotRs.getString("StartTime");
                     String endTime = timeslotRs.getString("EndTime");
 
-                    System.out.println(day + " | " + startTime + " - " + endTime);
+                    // Format time slot (remove seconds for cleaner display)
+                    String timeSlot = startTime.substring(0, 5) + "-" + endTime.substring(0, 5);
+                    System.out.printf("%-20s", timeSlot);
 
-                    ResultSet roomRs = conn.createStatement().executeQuery(
-                            "SELECT RoomID, RoomName, RoomType FROM rooms WHERE RoomType != 'Online' ORDER BY RoomName"
-                    );
-
-                    while (roomRs.next()) {
-                        int roomId = roomRs.getInt("RoomID");
-                        String roomName = roomRs.getString("RoomName");
-                        String roomType = roomRs.getString("RoomType");
-
+                    // Check each room's usage for this timeslot
+                    for (RoomInfo room : rooms) {
                         PreparedStatement checkUsage = conn.prepareStatement(
                                 "SELECT sec.SectionName, c.IsLab " +
                                         "FROM schedule s " +
@@ -154,61 +182,78 @@ public class Display {
                                         "JOIN days_table d ON s.day_id = d.day_id " +
                                         "WHERE s.RoomID = ? AND s.TimeSlotID = ? AND d.day = ?"
                         );
-                        checkUsage.setInt(1, roomId);
+                        checkUsage.setInt(1, room.id);
                         checkUsage.setInt(2, timeslotId);
                         checkUsage.setString(3, day);
 
                         ResultSet usageRs = checkUsage.executeQuery();
 
-                        switch (roomType) {
-                            case "Lecture":
-                                if (usageRs.next()) {
-                                    String sectionName = usageRs.getString("SectionName");
-                                    boolean isLab = usageRs.getBoolean("IsLab");
-                                    String type = isLab ? "Lab" : "Lec";
-                                    System.out.println(roomName + " (" + sectionName + " - " + type + ")");
-                                } else {
-                                    System.out.println(roomName + " (Not Used)");
-                                }
-                                break;
+                        if (usageRs.next()) {
+                            String sectionName = usageRs.getString("SectionName");
+                            boolean isLab = usageRs.getBoolean("IsLab");
+                            String type = isLab ? "Lab" : "Lec";
+                            String cellContent = sectionName + "-" + type;
 
-                            case "Laboratory":
-                                if (usageRs.next()) {
-                                    String sectionName = usageRs.getString("SectionName");
-                                    boolean isLab = usageRs.getBoolean("IsLab");
-                                    String type = isLab ? "Lab" : "Lec";
-                                    System.out.println(roomName + " (" + sectionName + " - " + type + ")");
-                                } else {
-                                    System.out.println(roomName + " (Not Used)");
-                                }
-                                break;
-
-                            default:
-                                if (usageRs.next()) {
-                                    String sectionName = usageRs.getString("SectionName");
-                                    boolean isLab = usageRs.getBoolean("IsLab");
-                                    String type = isLab ? "Lab" : "Lec";
-                                    System.out.println(roomName + " (" + sectionName + " - " + type + ")");
-                                } else {
-                                    System.out.println(roomName + " (Not Used)");
-                                }
-                                break;
+                            // Truncate if too long
+                            if (cellContent.length() > 18) {
+                                cellContent = cellContent.substring(0, 15) + "...";
+                            }
+                            System.out.printf("| %-18s", cellContent);
+                            dayUsedSlots++;
+                        } else {
+                            System.out.printf("| %-18s", "---");
+                            dayNotUsedSlots++;
                         }
 
                         usageRs.close();
                         checkUsage.close();
                     }
-
-                    roomRs.close();
-                    System.out.println();
+                    System.out.println("|");
                 }
 
                 timeslotRs.close();
+
+                // Print day summary
+                System.out.println("\n" + day + " Summary:");
+                System.out.println("  Used slots: " + dayUsedSlots);
+                System.out.println("  Not used slots: " + dayNotUsedSlots);
+                System.out.println("  Total slots: " + (dayUsedSlots + dayNotUsedSlots));
+                double dayUtilization = (dayUsedSlots + dayNotUsedSlots) > 0
+                        ? (dayUsedSlots * 100.0 / (dayUsedSlots + dayNotUsedSlots))
+                        : 0;
+                System.out.printf("  Utilization: %.2f%%\n", dayUtilization);
+
+                // Add to total counters
+                totalUsedSlots += dayUsedSlots;
+                totalNotUsedSlots += dayNotUsedSlots;
             }
+
+            // Print overall summary
+            System.out.println("\n═══════════════════════════════════════════════════════════════════════════════════════════");
+            System.out.println("                                    OVERALL SUMMARY");
+            System.out.println("═══════════════════════════════════════════════════════════════════════════════════════════");
+            System.out.println("Total used slots (all days): " + totalUsedSlots);
+            System.out.println("Total not used slots (all days): " + totalNotUsedSlots);
+            System.out.println("Total slots (all days): " + (totalUsedSlots + totalNotUsedSlots));
+            double totalUtilization = (totalUsedSlots + totalNotUsedSlots) > 0
+                    ? (totalUsedSlots * 100.0 / (totalUsedSlots + totalNotUsedSlots))
+                    : 0;
+            System.out.printf("Overall utilization: %.2f%%\n", totalUtilization);
 
         } catch (SQLException e) {
             System.out.println("❌ Error displaying timeslot usage:");
             e.printStackTrace();
+        }
+    }
+
+    // Helper class for room information
+    private static class RoomInfo {
+        int id;
+        String name;
+
+        RoomInfo(int id, String name) {
+            this.id = id;
+            this.name = name;
         }
     }
 
