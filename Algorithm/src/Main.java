@@ -20,9 +20,8 @@ public class Main {
             System.out.println("2. Get number of Enrollees");
             System.out.println("3. Generate Sections");
             System.out.println("4. Generate & Display Schedule");
-            System.out.println("5. Reschedule Unscheduled Courses");
-            System.out.println("6. Save Schedule to DB");
-            System.out.println("7. Display Room Usage by Timeslot");
+            System.out.println("5. Save Schedule to DB");
+            System.out.println("6. Display Room Usage by Timeslot");
             System.out.println("0. Exit");
             System.out.println("==============================");
             System.out.print("Enter your choice: ");
@@ -56,25 +55,6 @@ public class Main {
                     break;
 
                 case 5:
-                    // Reschedule unscheduled courses (ignores room type restrictions)
-                    if (sched.schedule.isEmpty()) {
-                        System.out.println("⚠️ No schedule generated yet. Please generate first (option 4).");
-                    } else if (sched.unscheduled.isEmpty()) {
-                        System.out.println("✅ All courses are already scheduled!");
-                    } else {
-                        System.out.println("\n⚠️ WARNING: This will ignore room type restrictions!");
-                        System.out.print("Continue with rescheduling? (Y/N): ");
-                        choice2 = Character.toUpperCase(scanner.next().charAt(0));
-                        if (choice2 == 'Y') {
-                            sched.rescheduleUnscheduled();
-                        } else {
-                            System.out.println("❌ Canceled rescheduling!");
-                        }
-                    }
-                    display.showSchedule(sched.schedule, sched.unscheduled);
-                    break;
-
-                case 6:
                     // Save schedule that was already generated
                     if (sched.schedule.isEmpty()) {
                         System.out.println("⚠️ No schedule generated yet. Please generate first (option 4).");
@@ -89,7 +69,7 @@ public class Main {
                     }
                     break;
 
-                case 7:
+                case 6:
                     // Display room usage by timeslot (reads from saved schedule in DB)
                     display.displayTimeslotUsage();
                     break;

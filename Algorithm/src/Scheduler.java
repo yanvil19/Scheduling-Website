@@ -43,6 +43,57 @@ public class Scheduler {
         }
     }
 
+    // ===== CONFLICT CHECKING METHODS =====
+
+    // Check if a room is available at a specific timeslot and day
+    private boolean isRoomAvailable(Room room, Timeslot slot, String day, Set<String> used) {
+        String roomSlotDay = room.id + "-" + slot.id + "-" + day;
+        return !used.contains(roomSlotDay);
+    }
+
+    // Check if a section is free at a specific timeslot and day
+    private boolean isSectionAvailable(Section section, Timeslot slot, String day,
+                                       Set<String> sectionSlotDayUsage) {
+        String sectionSlotDay = section.id + "-" + slot.id + "-" + day;
+        return !sectionSlotDayUsage.contains(sectionSlotDay);
+    }
+
+    // Check if both days in a split session are available for the section
+    private boolean isSplitSessionAvailable(Section section, Timeslot slot,
+                                            String firstDay, String secondDay,
+                                            Set<String> sectionSlotDayUsage) {
+        return isSectionAvailable(section, slot, firstDay, sectionSlotDayUsage) &&
+                isSectionAvailable(section, slot, secondDay, sectionSlotDayUsage);
+    }
+
+    // Mark a room as occupied at a specific time and day
+    private void markRoomUsed(Room room, Timeslot slot, String day, Set<String> used) {
+        String roomSlotDay = room.id + "-" + slot.id + "-" + day;
+        used.add(roomSlotDay);
+    }
+
+    // Mark a section as occupied at a specific time and day
+    private void markSectionUsed(Section section, Timeslot slot, String day,
+                                 Set<String> sectionSlotDayUsage) {
+        String sectionSlotDay = section.id + "-" + slot.id + "-" + day;
+        sectionSlotDayUsage.add(sectionSlotDay);
+    }
+
+    // Mark both days of a split session as used for a section
+    private void markSplitSessionUsed(Section section, Timeslot slot,
+                                      String firstDay, String secondDay,
+                                      Set<String> sectionSlotDayUsage) {
+        markSectionUsed(section, slot, firstDay, sectionSlotDayUsage);
+        markSectionUsed(section, slot, secondDay, sectionSlotDayUsage);
+    }
+
+    // Mark both rooms as used for a split session
+    private void markBothRoomsUsed(Room room1, Room room2, Timeslot slot,
+                                   String firstDay, String secondDay, Set<String> used) {
+        markRoomUsed(room1, slot, firstDay, used);
+        markRoomUsed(room2, slot, secondDay, used);
+    }
+
     // Load all necessary data from DB
     public void loadData() {
         try (Connection conn = JDBC.getConnection()) {
@@ -135,6 +186,11 @@ public class Scheduler {
 
         String[] days = {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
 
+        // Shuffle days to randomize starting point
+        List<String> daysList = new ArrayList<>(Arrays.asList(days));
+        Collections.shuffle(daysList);
+        days = daysList.toArray(new String[0]);
+
         // For every section-subject pair
         for (Section section : sections) {
             for (Subject subject : subjects) {
@@ -201,9 +257,7 @@ public class Scheduler {
                     int dayId = getDayId(conn, entry.day);
 
                     // Online → always RoomID = 6
-                    int roomId = entry.roomName.equals("Online")
-                            ? 6
-                            : getRoomId(conn, entry.roomName);
+                    int roomId = entry.roomName.equals("Online") ? 6 : getRoomId(conn, entry.roomName);
 
                     if (roomId == -1 || sectionId == -1 || subjectId == -1 ||
                             timeSlotId == -1 || durationId == -1 || dayId == -1) {
@@ -251,44 +305,39 @@ public class Scheduler {
             for (String firstDay : partnerPairs) {
                 String secondDay = PARTNER_DAYS.get(firstDay);
 
-                String sectionSlotDay1 = section.id + "-" + slot.id + "-" + firstDay;
-                String sectionSlotDay2 = section.id + "-" + slot.id + "-" + secondDay;
-
-                // Section not yet scheduled on these days
-                if (!sectionSlotDayUsage.contains(sectionSlotDay1) &&
-                        !sectionSlotDayUsage.contains(sectionSlotDay2)) {
-
-                    ScheduleEntry entry1, entry2;
-
-                    if (isYear1) {
-                        // Year1 special: Online split
-                        entry1 = new ScheduleEntry(section.name, subject.code, subject.name, subject.type,
-                                "Online", slot.start + "-" + slot.end, firstDay, hoursPerSession);
-                        entry2 = new ScheduleEntry(section.name, subject.code, subject.name, subject.type,
-                                "Online", slot.start + "-" + slot.end, secondDay, hoursPerSession);
-                    } else {
-                        // Find available physical rooms
-                        Room room1 = findAvailablePhysicalRoom(subject, slot, firstDay, used);
-                        Room room2 = findAvailablePhysicalRoom(subject, slot, secondDay, used);
-                        if (room1 == null || room2 == null) continue;
-
-                        entry1 = new ScheduleEntry(section.name, subject.code, subject.name, subject.type,
-                                room1.name, slot.start + "-" + slot.end, firstDay, hoursPerSession);
-                        entry2 = new ScheduleEntry(section.name, subject.code, subject.name, subject.type,
-                                room2.name, slot.start + "-" + slot.end, secondDay, hoursPerSession);
-
-                        // Mark usage
-                        used.add(room1.id + "-" + slot.id + "-" + firstDay);
-                        used.add(room2.id + "-" + slot.id + "-" + secondDay);
-                    }
-
-                    // Commit schedule
-                    schedule.add(entry1);
-                    schedule.add(entry2);
-                    sectionSlotDayUsage.add(sectionSlotDay1);
-                    sectionSlotDayUsage.add(sectionSlotDay2);
-                    return true;
+                // Check if section is available on both days
+                if (!isSplitSessionAvailable(section, slot, firstDay, secondDay, sectionSlotDayUsage)) {
+                    continue;
                 }
+
+                ScheduleEntry entry1, entry2;
+
+                if (isYear1) {
+                    // Year1 special: Online split
+                    entry1 = new ScheduleEntry(section.name, subject.code, subject.name, subject.type,
+                            "Online", slot.start + "-" + slot.end, firstDay, hoursPerSession);
+                    entry2 = new ScheduleEntry(section.name, subject.code, subject.name, subject.type,
+                            "Online", slot.start + "-" + slot.end, secondDay, hoursPerSession);
+                } else {
+                    // Find available physical rooms
+                    Room room1 = findAvailablePhysicalRoom(subject, slot, firstDay, used);
+                    Room room2 = findAvailablePhysicalRoom(subject, slot, secondDay, used);
+                    if (room1 == null || room2 == null) continue;
+
+                    entry1 = new ScheduleEntry(section.name, subject.code, subject.name, subject.type,
+                            room1.name, slot.start + "-" + slot.end, firstDay, hoursPerSession);
+                    entry2 = new ScheduleEntry(section.name, subject.code, subject.name, subject.type,
+                            room2.name, slot.start + "-" + slot.end, secondDay, hoursPerSession);
+
+                    // Mark rooms as used
+                    markBothRoomsUsed(room1, room2, slot, firstDay, secondDay, used);
+                }
+
+                // Commit schedule
+                schedule.add(entry1);
+                schedule.add(entry2);
+                markSplitSessionUsed(section, slot, firstDay, secondDay, sectionSlotDayUsage);
+                return true;
             }
         }
         return false;
@@ -304,18 +353,18 @@ public class Scheduler {
             for (String firstDay : partnerPairs) {
                 String secondDay = PARTNER_DAYS.get(firstDay);
 
-                String sectionSlotDay1 = section.id + "-" + slot.id + "-" + firstDay;
-                String sectionSlotDay2 = section.id + "-" + slot.id + "-" + secondDay;
-                if (sectionSlotDayUsage.contains(sectionSlotDay1) ||
-                        sectionSlotDayUsage.contains(sectionSlotDay2)) continue;
+                // Check if section is available on both days
+                if (!isSplitSessionAvailable(section, slot, firstDay, secondDay, sectionSlotDayUsage)) {
+                    continue;
+                }
 
                 // Assign 1 F2F + 1 Online
                 for (Room room : rooms) {
                     if (!room.typeMatches(subject)) continue;
                     if (room.type.equalsIgnoreCase("Online")) continue;
 
-                    String roomSlotDay1 = room.id + "-" + slot.id + "-" + firstDay;
-                    if (used.contains(roomSlotDay1)) continue;
+                    // Check if room is available
+                    if (!isRoomAvailable(room, slot, firstDay, used)) continue;
 
                     ScheduleEntry f2fEntry = new ScheduleEntry(section.name, subject.code, subject.name, subject.type,
                             room.name, slot.start + "-" + slot.end, firstDay, hoursPerSession);
@@ -326,9 +375,8 @@ public class Scheduler {
                     schedule.add(onlineEntry);
 
                     // Mark usage
-                    sectionSlotDayUsage.add(sectionSlotDay1);
-                    sectionSlotDayUsage.add(sectionSlotDay2);
-                    used.add(roomSlotDay1);
+                    markSplitSessionUsed(section, slot, firstDay, secondDay, sectionSlotDayUsage);
+                    markRoomUsed(room, slot, firstDay, used);
                     return true;
                 }
             }
@@ -343,20 +391,21 @@ public class Scheduler {
 
         for (Timeslot slot : timeslots) {
             for (String day : days) {
-                String sectionSlotDay = section.id + "-" + slot.id + "-" + day;
-                if (sectionSlotDayUsage.contains(sectionSlotDay)) continue;
+                // Check if section is available
+                if (!isSectionAvailable(section, slot, day, sectionSlotDayUsage)) continue;
 
                 // Year1 LAB → F2F
                 if (isYear1 && subject.totalTime <= 2.0 && subject.type.equalsIgnoreCase("LAB")) {
                     for (Room room : rooms) {
                         if (!room.typeMatches(subject)) continue;
-                        String roomSlotDay = room.id + "-" + slot.id + "-" + day;
-                        if (used.contains(roomSlotDay)) continue;
+
+                        // Check if room is available
+                        if (!isRoomAvailable(room, slot, day, used)) continue;
 
                         schedule.add(new ScheduleEntry(section.name, subject.code, subject.name, subject.type,
                                 room.name, slot.start + "-" + slot.end, day, subject.totalTime));
-                        sectionSlotDayUsage.add(sectionSlotDay);
-                        used.add(roomSlotDay);
+                        markSectionUsed(section, slot, day, sectionSlotDayUsage);
+                        markRoomUsed(room, slot, day, used);
                         return true;
                     }
                 }
@@ -365,7 +414,7 @@ public class Scheduler {
                 if (isYear1) {
                     schedule.add(new ScheduleEntry(section.name, subject.code, subject.name, subject.type,
                             "Online", slot.start + "-" + slot.end, day, subject.totalTime));
-                    sectionSlotDayUsage.add(sectionSlotDay);
+                    markSectionUsed(section, slot, day, sectionSlotDayUsage);
                     return true;
                 }
 
@@ -374,236 +423,18 @@ public class Scheduler {
                     if (!room.typeMatches(subject)) continue;
                     if ((section.yearLevelId >= 3) && room.type.equalsIgnoreCase("Online")) continue;
 
-                    String roomSlotDay = room.id + "-" + slot.id + "-" + day;
-                    if (used.contains(roomSlotDay)) continue;
+                    // Check if room is available
+                    if (!isRoomAvailable(room, slot, day, used)) continue;
 
                     schedule.add(new ScheduleEntry(section.name, subject.code, subject.name, subject.type,
                             room.name, slot.start + "-" + slot.end, day, subject.totalTime));
-                    sectionSlotDayUsage.add(sectionSlotDay);
-                    used.add(roomSlotDay);
+                    markSectionUsed(section, slot, day, sectionSlotDayUsage);
+                    markRoomUsed(room, slot, day, used);
                     return true;
                 }
             }
         }
         return false;
-    }
-
-    /**
-     * Attempts to schedule previously unscheduled courses by ignoring room type restrictions.
-     * This method looks for any available room slots and places courses there regardless of
-     * whether it's a lecture room for a lab or vice versa.
-     */
-    public void rescheduleUnscheduled() {
-        if (unscheduled.isEmpty()) {
-            System.out.println("✅ No unscheduled courses to reschedule!");
-            return;
-        }
-
-        System.out.println("\n🔄 Attempting to reschedule " + unscheduled.size() + " unscheduled courses...");
-        System.out.println("⚠️  WARNING: Ignoring room type restrictions for flexibility\n");
-
-        // Track what was successfully rescheduled
-        List<String> successfullyScheduled = new ArrayList<>();
-        List<String> stillUnscheduled = new ArrayList<>();
-
-        // Rebuild tracking sets from current schedule
-        Set<String> used = new HashSet<>();
-        Set<String> sectionSlotDayUsage = new HashSet<>();
-
-        for (ScheduleEntry entry : schedule) {
-            // Get IDs for tracking
-            try (Connection conn = JDBC.getConnection()) {
-                int sectionId = getSectionId(conn, entry.sectionName);
-                int roomId = entry.roomName.equals("Online") ? 6 : getRoomId(conn, entry.roomName);
-                int timeslotId = getTimeSlotId(conn, entry.timeSlot);
-
-                if (sectionId != -1 && timeslotId != -1) {
-                    sectionSlotDayUsage.add(sectionId + "-" + timeslotId + "-" + entry.day);
-                }
-                if (roomId != -1 && timeslotId != -1) {
-                    used.add(roomId + "-" + timeslotId + "-" + entry.day);
-                }
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
-        }
-
-        String[] days = {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
-
-        // Parse unscheduled list to get section and subject info
-        for (String unscheduledItem : unscheduled) {
-            // Parse format: "SubjectCode (SectionName) - Type"
-            String[] parts = unscheduledItem.split(" \\(");
-            if (parts.length < 2) continue;
-
-            String subjectCode = parts[0].trim();
-            String remaining = parts[1];
-            String[] parts2 = remaining.split("\\) - ");
-            if (parts2.length < 2) continue;
-
-            String sectionName = parts2[0].trim();
-            String type = parts2[1].trim();
-
-            // Find the section and subject objects
-            Section targetSection = null;
-            Subject targetSubject = null;
-
-            for (Section sec : sections) {
-                if (sec.name.equals(sectionName)) {
-                    targetSection = sec;
-                    break;
-                }
-            }
-
-            for (Subject sub : subjects) {
-                if (sub.code.equals(subjectCode) && sub.type.equals(type)) {
-                    targetSubject = sub;
-                    break;
-                }
-            }
-
-            if (targetSection == null || targetSubject == null) {
-                System.out.println("⚠️  Could not find section/subject for: " + unscheduledItem);
-                stillUnscheduled.add(unscheduledItem);
-                continue;
-            }
-
-            // Try to place the course ANYWHERE available
-            boolean placed = tryPlaceAnywhere(targetSection, targetSubject, used, sectionSlotDayUsage, days);
-
-            if (placed) {
-                successfullyScheduled.add(unscheduledItem);
-                System.out.println("✅ Rescheduled: " + unscheduledItem);
-            } else {
-                stillUnscheduled.add(unscheduledItem);
-                System.out.println("❌ Still cannot schedule: " + unscheduledItem);
-            }
-        }
-
-        // Update the unscheduled list
-        unscheduled = stillUnscheduled;
-
-        // Print summary
-        System.out.println("\n📊 RESCHEDULE SUMMARY:");
-        System.out.println("Successfully rescheduled: " + successfullyScheduled.size());
-        System.out.println("Still unscheduled: " + stillUnscheduled.size());
-    }
-
-    /**
-     * Tries to place a course in ANY available room, ignoring room type restrictions.
-     * Uses single day placement for ≤2 hours, split session for >2 hours.
-     */
-    private boolean tryPlaceAnywhere(Section section, Subject subject, Set<String> used,
-                                     Set<String> sectionSlotDayUsage, String[] days) {
-
-        if (subject.totalTime <= 2.0) {
-            return tryPlaceAnywhereSingleDay(section, subject, used, sectionSlotDayUsage, days);
-        } else {
-            return tryPlaceAnywhereSplitSession(section, subject, used, sectionSlotDayUsage);
-        }
-    }
-
-    /**
-     * Places a ≤2 hour course in any available room on a single day.
-     */
-    private boolean tryPlaceAnywhereSingleDay(Section section, Subject subject, Set<String> used,
-                                              Set<String> sectionSlotDayUsage, String[] days) {
-
-        for (Timeslot slot : timeslots) {
-            for (String day : days) {
-                String sectionSlotDay = section.id + "-" + slot.id + "-" + day;
-
-                if (sectionSlotDayUsage.contains(sectionSlotDay)) continue;
-
-                // Try ANY room (ignoring type restrictions)
-                for (Room room : rooms) {
-                    // Skip virtual/online rooms - we want physical rooms
-                    if (room.type.equalsIgnoreCase("Online")) continue;
-
-                    String roomSlotDay = room.id + "-" + slot.id + "-" + day;
-                    if (used.contains(roomSlotDay)) continue;
-
-                    ScheduleEntry entry = new ScheduleEntry(
-                            section.name, subject.code, subject.name, subject.type,
-                            room.name, slot.start + "-" + slot.end, day, subject.totalTime
-                    );
-
-                    schedule.add(entry);
-                    sectionSlotDayUsage.add(sectionSlotDay);
-                    used.add(roomSlotDay);
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * Places a >2 hour course in any available rooms on partner days.
-     */
-    private boolean tryPlaceAnywhereSplitSession(Section section, Subject subject, Set<String> used,
-                                                 Set<String> sectionSlotDayUsage) {
-
-        double hoursPerSession = subject.totalTime / 2.0;
-
-        for (Timeslot slot : timeslots) {
-            String[] partnerPairs = {"Monday", "Tuesday", "Wednesday"};
-
-            for (String firstDay : partnerPairs) {
-                String secondDay = PARTNER_DAYS.get(firstDay);
-
-                String sectionSlotDay1 = section.id + "-" + slot.id + "-" + firstDay;
-                String sectionSlotDay2 = section.id + "-" + slot.id + "-" + secondDay;
-
-                if (sectionSlotDayUsage.contains(sectionSlotDay1) ||
-                        sectionSlotDayUsage.contains(sectionSlotDay2)) continue;
-
-                // Find ANY two available rooms (ignoring type)
-                Room room1 = findAnyAvailableRoom(slot, firstDay, used);
-                Room room2 = findAnyAvailableRoom(slot, secondDay, used);
-
-                if (room1 == null || room2 == null) continue;
-
-                String roomSlotDay1 = room1.id + "-" + slot.id + "-" + firstDay;
-                String roomSlotDay2 = room2.id + "-" + slot.id + "-" + secondDay;
-
-                if (used.contains(roomSlotDay1) || used.contains(roomSlotDay2)) continue;
-
-                ScheduleEntry entry1 = new ScheduleEntry(section.name, subject.code, subject.name, subject.type,
-                        room1.name, slot.start + "-" + slot.end, firstDay, hoursPerSession);
-                ScheduleEntry entry2 = new ScheduleEntry(section.name, subject.code, subject.name, subject.type,
-                        room2.name, slot.start + "-" + slot.end, secondDay, hoursPerSession);
-
-                schedule.add(entry1);
-                schedule.add(entry2);
-
-                sectionSlotDayUsage.add(sectionSlotDay1);
-                sectionSlotDayUsage.add(sectionSlotDay2);
-                used.add(roomSlotDay1);
-                used.add(roomSlotDay2);
-
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * Finds ANY available physical room regardless of type.
-     */
-    private Room findAnyAvailableRoom(Timeslot slot, String day, Set<String> used) {
-        for (Room room : rooms) {
-            // Skip virtual/online rooms
-            if (room.type.equalsIgnoreCase("Online")) continue;
-
-            String roomSlotDay = room.id + "-" + slot.id + "-" + day;
-            if (!used.contains(roomSlotDay)) {
-                return room;
-            }
-        }
-        return null;
     }
 
     private Room findAvailablePhysicalRoom(Subject subject, Timeslot slot, String day, Set<String> used) {
@@ -613,8 +444,7 @@ public class Scheduler {
             // Only use physical rooms (not virtual/online ones)
             if (room.type.equalsIgnoreCase("Online")) continue;
 
-            String roomSlotDay = room.id + "-" + slot.id + "-" + day;
-            if (!used.contains(roomSlotDay)) {
+            if (isRoomAvailable(room, slot, day, used)) {
                 return room;
             }
         }
