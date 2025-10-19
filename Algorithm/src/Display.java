@@ -70,29 +70,38 @@ public class Display {
                 }
             }
 
-            System.out.println("\n=============================================================================================================================================================");
+            System.out.println("\n===============================================================================================================================================================");
             System.out.println("                                                                    " + currentDay.toUpperCase());
-            System.out.println("=============================================================================================================================================================");
+            System.out.println("===============================================================================================================================================================");
 
             if (!dayEntries.isEmpty()) {
-                System.out.printf("%-12s | %-12s | %-50s | %-4s | %-12s | %-15s | %-8s%n",
-                        "Section", "Code", "Subject Name", "Type", "Room", "Time Slot", "Duration");
-                System.out.println("=============================================================================================================================================================");
+                // Updated header with Actual Time column
+                System.out.printf("%-12s | %-12s | %-50s | %-4s | %-12s | %-15s | %-8s | %-15s%n",
+                        "Section", "Code", "Subject Name", "Type", "Room", "Time Slot", "Duration", "Actual Time");
+                System.out.println("===============================================================================================================================================================");
+
                 for (Scheduler.ScheduleEntry entry : dayEntries) {
-                    System.out.printf("%-12s | %-12s | %-50s | %-4s | %-12s | %-15s | %-8.3f%n",
+                    // Format actual time if available
+                    String actualTime = (entry.actualStartTime != null && entry.actualEndTime != null)
+                            ? entry.actualStartTime.substring(0, 5) + "-" + entry.actualEndTime.substring(0, 5)
+                            : "N/A";
+
+                    System.out.printf("%-12s | %-12s | %-50s | %-4s | %-12s | %-15s | %-8.3f | %-15s%n",
                             entry.sectionName,
                             entry.subjectCode,
                             entry.subjectName,
                             entry.type,
                             entry.roomName,
                             entry.timeSlot,
-                            entry.duration);
+                            entry.duration,
+                            actualTime);
                 }
-                System.out.println("=============================================================================================================================================================");
+
+                System.out.println("===============================================================================================================================================================");
                 System.out.println(currentDay + " total entries: " + dayEntries.size());
             } else {
                 System.out.println("No classes scheduled for " + currentDay);
-                System.out.println("=============================================================================================================================================================");
+                System.out.println("===============================================================================================================================================================");
             }
         }
 
@@ -108,6 +117,7 @@ public class Display {
             System.out.println("Total unscheduled: " + unscheduled.size());
         }
     }
+
 
     // ==============================
     // SHOW ROOM USAGE BY TIMESLOT (TABLE FORMAT)

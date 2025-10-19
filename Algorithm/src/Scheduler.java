@@ -30,8 +30,15 @@ public class Scheduler {
     class ScheduleEntry {
         String sectionName, subjectCode, subjectName, type, roomName, timeSlot, day;
         double duration;
+
+        // 🧩 New fields for actual time logic
+        int scheduleId;              // Used to link back to DB row (set during save)
+        String timeSlotStart;        // Parsed from timeSlot (e.g., "07:00")
+        String actualStartTime;      // Calculated in memory
+        String actualEndTime;        // Calculated in memory
+
         public ScheduleEntry(String sectionName, String subjectCode, String subjectName,
-                             String type, String roomName, String timeSlot, String day, double duration) {
+                            String type, String roomName, String timeSlot, String day, double duration) {
             this.sectionName = sectionName;
             this.subjectCode = subjectCode;
             this.subjectName = subjectName;
@@ -40,6 +47,18 @@ public class Scheduler {
             this.timeSlot = timeSlot;
             this.day = day;
             this.duration = duration;
+
+            // 🧠 Optional: parse timeSlotStart from timeSlot string here
+            this.timeSlotStart = extractStartTime(timeSlot);
+        }
+
+        // Helper method to extract start time from timeSlot string
+        private String extractStartTime(String timeSlot) {
+            // Example: "07:00 - 08:20" → "07:00"
+            if (timeSlot != null && timeSlot.contains("-")) {
+                return timeSlot.split("-")[0].trim();
+            }
+            return timeSlot; // fallback
         }
     }
 
@@ -238,13 +257,15 @@ public class Scheduler {
             }
 
             conn.createStatement().executeUpdate("DELETE FROM schedule"); // clear old schedule
+            conn.createStatement().executeUpdate("DELETE FROM actual_time");
 
             String insertQuery = """
-            INSERT INTO schedule (SectionID, SubjectID, RoomID, TimeSlotID, duration_id, day_id) 
-            VALUES (?, ?, ?, ?, ?, ?)
-            """;
+                INSERT INTO schedule (SectionID, SubjectID, RoomID, TimeSlotID, duration_id, day_id) 
+                VALUES (?, ?, ?, ?, ?, ?)
+                """;
 
-            PreparedStatement ps = conn.prepareStatement(insertQuery);
+            // Enable retrieval of generated keys
+            PreparedStatement ps = conn.prepareStatement(insertQuery, Statement.RETURN_GENERATED_KEYS);
             int savedCount = 0;
 
             for (ScheduleEntry entry : schedule) {
@@ -255,25 +276,29 @@ public class Scheduler {
                     int timeSlotId = getTimeSlotId(conn, entry.timeSlot);
                     int durationId = getDurationId(conn, entry.duration);
                     int dayId = getDayId(conn, entry.day);
-
-                    // Online → always RoomID = 6
                     int roomId = entry.roomName.equals("Online") ? 6 : getRoomId(conn, entry.roomName);
 
                     if (roomId == -1 || sectionId == -1 || subjectId == -1 ||
                             timeSlotId == -1 || durationId == -1 || dayId == -1) {
-                        System.out.println("⚠️  Missing data for: " + entry.sectionName + " - " + entry.subjectCode);
+                        System.out.println("Missing data for: " + entry.sectionName + " - " + entry.subjectCode);
                         continue;
                     }
 
-                    // Save
+                    // Save to DB
                     ps.setInt(1, sectionId);
                     ps.setInt(2, subjectId);
                     ps.setInt(3, roomId);
                     ps.setInt(4, timeSlotId);
                     ps.setInt(5, durationId);
                     ps.setInt(6, dayId);
-
                     ps.executeUpdate();
+
+                    //Capture generated ScheduleID
+                    ResultSet keys = ps.getGeneratedKeys();
+                    if (keys.next()) {
+                        entry.scheduleId = keys.getInt(1);
+                    }
+
                     savedCount++;
 
                 } catch (SQLException e) {
@@ -282,15 +307,16 @@ public class Scheduler {
                 }
             }
 
-            System.out.println("✅ Successfully saved " + savedCount + " schedule entries to database.");
-            System.out.println("\n⏱️  Schedule Generation Time: " +
+            System.out.println("Successfully saved " + savedCount + " schedule entries to database.");
+            System.out.println("\nSchedule Generation Time: " +
                     (scheduleGenerationTimeNanos / 1_000_000.0) + " ms");
 
         } catch (SQLException e) {
-            System.out.println("❌ Error saving schedule to database:");
+            System.out.println("Error saving schedule to database:");
             e.printStackTrace();
         }
     }
+
 
     // ===== Core placement strategies =====
 

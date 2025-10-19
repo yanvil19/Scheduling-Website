@@ -7,6 +7,7 @@ public class Main {
         Display display = new Display();
         Enrollment enroll = new Enrollment();
         Scheduler sched = new Scheduler();
+        ScheduleTimingManager scheduleTimingManager = new ScheduleTimingManager();
         Scanner scanner = new Scanner(System.in);
 
         int choice;
@@ -51,20 +52,25 @@ public class Main {
                 case 4:
                     // Generate schedule then display it
                     sched.generateSchedule();
+                    ScheduleTimingManager.calculateActualTimes(sched.schedule);
                     display.showSchedule(sched.schedule, sched.unscheduled);
                     break;
 
                 case 5:
-                    // Save schedule that was already generated
                     if (sched.schedule.isEmpty()) {
                         System.out.println("⚠️ No schedule generated yet. Please generate first (option 4).");
                     } else {
                         System.out.print("Save schedule to database? (Y/N): ");
                         choice2 = Character.toUpperCase(scanner.next().charAt(0));
                         if (choice2 == 'Y') {
+                            // First save schedule to get IDs
                             sched.saveScheduleToDatabase();
-                        } else {
-                            System.out.println("❌ Canceled saving to database!");
+                            
+                            // Then process actual times
+                            ScheduleTimingManager.calculateActualTimes(sched.schedule);
+                            ScheduleTimingManager.saveActualTimesToDatabase();
+                            
+                            System.out.println("✅ Schedule and actual times saved successfully!");
                         }
                     }
                     break;
