@@ -38,6 +38,14 @@
             </div>
 
             <div class="lower-right-part">
+                <!-- Room Display button -->
+                <div class="dropdown-container">
+                    <label class="room-usage-label">&nbsp;</label>
+                    <button id="room-usage" class="usage-btn" type="button">
+                        Room Usage
+                    </button>
+                </div>
+
                 <!-- CSV Download button -->
                 <div class="dropdown-container">
                     <label class="download-label">&nbsp;</label>
@@ -99,6 +107,27 @@
                 </div>
             </div>
         </div>
+
+        <!-- Room Usage Modal -->
+        <div id="room-usage-modal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Room Usage Schedule</h3>
+                    <span class="close-modal">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <div class="room-selection">
+                        <label for="room-select">Select Room:</label>
+                        <select id="room-select">
+                            <option value="">Choose a room</option>
+                        </select>
+                    </div>
+                    <div id="room-usage-content"></div>
+                </div>
+            </div>
+        </div>
+
     </div>
 </body>
+
 </html>
