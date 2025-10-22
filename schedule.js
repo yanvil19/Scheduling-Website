@@ -12,6 +12,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const roomSelect = document.getElementById("room-select");
     const roomUsageContent = document.getElementById("room-usage-content");
 
+    // Store schedule data globally when loaded
+    let currentScheduleData = [];
 
     // Load schedules
     function loadSchedule() {
@@ -32,8 +34,10 @@ document.addEventListener("DOMContentLoaded", () => {
             .then(data => {
                 loading.style.display = "none";
                 if (data.success && data.data.length > 0) {
+                    currentScheduleData = data.data; // Store the schedule data
                     displaySchedule(data.data);
                 } else {
+                    currentScheduleData = []; // Clear stored data
                     scheduleContent.innerHTML =
                         "<p class='no-schedule'>No schedules found.</p>";
                 }
@@ -180,162 +184,50 @@ document.addEventListener("DOMContentLoaded", () => {
         const year = document.getElementById('year').value;
         const section = document.getElementById('section').value;
 
-        // Get schedule data from the current display
-        const scheduleData = extractScheduleData();
-
-        if (scheduleData.length === 0) {
-            alert('No schedule data to download. Please load schedules first.');
-            return;
-        }
-
-        const csvContent = convertToCSV(scheduleData);
-        const filename = generateFilename(program, year, section);
-
-        downloadCSV(csvContent, filename);
+        // Fetch CSV-specific data from API
+        fetch("api.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: `action=get_schedule_csv&program=${program}&year=${year}&section=${section}`
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.data.length > 0) {
+                    const csvContent = convertToCSV(data.data);
+                    const filename = generateFilename(program, year, section);
+                    downloadCSV(csvContent, filename);
+                } else {
+                    alert('No schedule data to download. Please load schedules first.');
+                }
+            })
+            .catch(err => {
+                alert('Error downloading CSV.');
+                console.error(err);
+            });
     }
 
-    function extractScheduleData() {
-        const scheduleContent = document.getElementById('schedule-content');
-        const sectionBlocks = scheduleContent.querySelectorAll('.section-calendar-block');
+    function convertToCSV(scheduleData) {
         const data = [];
 
-        sectionBlocks.forEach((block, blockIndex) => {
-            // Get section name from the header
-            const sectionHeader = block.querySelector('.section-calendar-header');
-            const sectionName = sectionHeader ? sectionHeader.textContent.trim() : 'Unknown Section';
+        // Add CSV header row
+        data.push(['Course Code', 'Course Title', 'Program', 'Section', 'Day', 'Start', 'End', 'Type', 'Room']);
 
-            // Add section header row
-            data.push([sectionName]);
-            data.push([]); // Empty row for spacing
-
-            // Get the table within this section block
-            const table = block.querySelector('table');
-            if (!table) return;
-
-            const rows = table.querySelectorAll('tr');
-
-            rows.forEach((row, rowIndex) => {
-                const cells = row.querySelectorAll('td, th');
-                const rowData = [];
-
-                cells.forEach((cell, cellIndex) => {
-                    if (rowIndex === 0) {
-                        // Header row - just get text content
-                        rowData.push(cell.textContent.trim());
-                    } else if (cellIndex === 0) {
-                        // Time column - just get the text
-                        rowData.push(cell.textContent.trim());
-                    } else {
-                        // Day columns - extract and format course information
-                        const scheduleBlocks = cell.querySelectorAll('.schedule-block');
-
-                        if (scheduleBlocks.length > 0) {
-                            let cellContent = [];
-
-                            scheduleBlocks.forEach(block => {
-                                let courseInfo = '';
-
-                                // Get course code
-                                const courseCodeElement = block.querySelector('.subject-name');
-                                if (courseCodeElement) {
-                                    courseInfo = courseCodeElement.textContent.trim();
-                                }
-
-                                // Get course details and format them properly
-                                const detailsElement = block.querySelector('.subject-details');
-                                if (detailsElement) {
-                                    // Split the details by <br> tags to get individual lines
-                                    const detailsHTML = detailsElement.innerHTML;
-                                    const detailLines = detailsHTML.split('<br>').map(line =>
-                                        line.trim().replace(/<[^>]*>/g, '') // Remove any remaining HTML tags
-                                    ).filter(line => line.length > 0);
-
-                                    if (detailLines.length > 0) {
-                                        // Format: Subject Name, Room, Type, Time
-                                        const formattedDetails = detailLines.join(' | ');
-                                        courseInfo += courseInfo ? ` - ${formattedDetails}` : formattedDetails;
-                                    }
-                                }
-
-                                if (courseInfo) {
-                                    cellContent.push(courseInfo);
-                                }
-                            });
-
-                            // Join multiple courses in the same cell with line breaks
-                            rowData.push(cellContent.join('\n'));
-                        } else {
-                            // Empty cell
-                            rowData.push('');
-                        }
-                    }
-                });
-
-                if (rowData.length > 0) {
-                    data.push(rowData);
-                }
-            });
-
-            // Add empty row between different sections
-            if (blockIndex !== sectionBlocks.length - 1) {
-                data.push([]);
-            }
+        // Add each schedule entry
+        scheduleData.forEach(schedule => {
+            data.push([
+                schedule.SubjectCode || '',
+                schedule.SubjectName || '',
+                schedule.ProgramName || '',
+                schedule.SectionName || '',
+                schedule.DayOfWeek || '',
+                schedule.ActualStartTime || schedule.StartTime || '',
+                schedule.ActualEndTime || schedule.EndTime || '',
+                schedule.Type || '',
+                schedule.RoomName || ''
+            ]);
         });
 
-        return data;
-    }
-
-    function getSectionName(table) {
-        let currentElement = table.previousElementSibling;
-        while (currentElement) {
-            if (currentElement.tagName && currentElement.tagName.match(/^H[1-6]$/)) {
-                return currentElement.textContent.trim();
-            }
-
-            if (currentElement.classList &&
-                (currentElement.classList.contains('section-title') ||
-                    currentElement.classList.contains('section-header') ||
-                    currentElement.classList.contains('schedule-section'))) {
-                return currentElement.textContent.trim();
-            }
-
-            const text = currentElement.textContent?.trim();
-            if (text && (text.includes('Section') || text.includes('Year') || text.includes('Program'))) {
-                return text;
-            }
-
-            currentElement = currentElement.previousElementSibling;
-        }
-
-        const caption = table.querySelector('caption');
-        if (caption) {
-            return caption.textContent.trim();
-        }
-
-        if (table.dataset.section) {
-            return table.dataset.section;
-        }
-
-        if (table.id) {
-            const match = table.id.match(/section[_-]?(\w+)/i);
-            if (match) return `Section ${match[1]}`;
-        }
-
-        let parentElement = table.parentElement;
-        while (parentElement && parentElement !== document.body) {
-            const sectionInfo = parentElement.querySelector('.section-name, .section-title, [data-section]');
-            if (sectionInfo) {
-                return sectionInfo.textContent.trim() || sectionInfo.dataset.section;
-            }
-            parentElement = parentElement.parentElement;
-        }
-
-        return null; // No section name found
-    }
-
-    function convertToCSV(data) {
         const csvRows = [];
-
         data.forEach(row => {
             const csvRow = row.map(cell => {
                 // Escape quotes and wrap in quotes if contains comma or quote
@@ -433,137 +325,136 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function displayRoomUsage(usageData, roomName) {
-    if (usageData.length === 0) {
-        roomUsageContent.innerHTML = `<p>No schedules found for room <strong>${roomName}</strong>.</p>`;
-        return;
-    }
-
-    // Define the time slots (same as your main schedule)
-    const timeSlots = [
-        "7:00 AM - 9:00 AM",
-        "9:00 AM - 11:00 AM", 
-        "11:00 AM - 1:00 PM",
-        "1:00 PM - 3:00 PM", 
-        "3:00 PM - 5:00 PM", 
-        "5:00 PM - 7:00 PM", 
-        "7:00 PM - 9:00 PM"
-    ];
-    
-    const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-
-    // Group data by day and time
-    const scheduleGrid = {};
-    
-    // Initialize empty grid
-    timeSlots.forEach(slot => {
-        scheduleGrid[slot] = {};
-        days.forEach(day => {
-            scheduleGrid[slot][day] = [];
-        });
-    });
-
-    // Populate the grid with schedule data
-    usageData.forEach(item => {
-        const actualTime = (item.ActualStartTime && item.ActualEndTime) 
-            ? `${item.ActualStartTime} - ${item.ActualEndTime}`
-            : `${item.StartTime} - ${item.EndTime}`;
-
-        // Find matching time slot
-        let matchingSlot = null;
-        for (let slot of timeSlots) {
-            if (actualTime === slot || `${item.StartTime} - ${item.EndTime}` === slot) {
-                matchingSlot = slot;
-                break;
-            }
+        if (usageData.length === 0) {
+            roomUsageContent.innerHTML = `<p>No schedules found for room <strong>${roomName}</strong>.</p>`;
+            return;
         }
 
-        // If no exact match, try to find the slot that contains this time
-        if (!matchingSlot) {
-            const startTime = item.ActualStartTime || item.StartTime;
-            const endTime = item.ActualEndTime || item.EndTime;
-            
+        // Define the time slots (same as your main schedule)
+        const timeSlots = [
+            "7:00 AM - 9:00 AM",
+            "9:00 AM - 11:00 AM",
+            "11:00 AM - 1:00 PM",
+            "1:00 PM - 3:00 PM",
+            "3:00 PM - 5:00 PM",
+            "5:00 PM - 7:00 PM",
+            "7:00 PM - 9:00 PM"
+        ];
+
+        const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+        // Group data by day and time
+        const scheduleGrid = {};
+
+        // Initialize empty grid
+        timeSlots.forEach(slot => {
+            scheduleGrid[slot] = {};
+            days.forEach(day => {
+                scheduleGrid[slot][day] = [];
+            });
+        });
+
+        // Populate the grid with schedule data
+        usageData.forEach(item => {
+            const actualTime = (item.ActualStartTime && item.ActualEndTime)
+                ? `${item.ActualStartTime} - ${item.ActualEndTime}`
+                : `${item.StartTime} - ${item.EndTime}`;
+
+            // Find matching time slot
+            let matchingSlot = null;
             for (let slot of timeSlots) {
-                const [slotStart, slotEnd] = slot.split(' - ');
-                if (startTime.includes(slotStart.split(':')[0]) || 
-                    endTime.includes(slotEnd.split(':')[0])) {
+                if (actualTime === slot || `${item.StartTime} - ${item.EndTime}` === slot) {
                     matchingSlot = slot;
                     break;
                 }
             }
-        }
 
-        if (matchingSlot && scheduleGrid[matchingSlot] && scheduleGrid[matchingSlot][item.DayOfWeek]) {
-            scheduleGrid[matchingSlot][item.DayOfWeek].push({
-                ...item,
-                displayTime: actualTime
-            });
-        }
-    });
+            // If no exact match, try to find the slot that contains this time
+            if (!matchingSlot) {
+                const startTime = item.ActualStartTime || item.StartTime;
+                const endTime = item.ActualEndTime || item.EndTime;
 
-    // Build the HTML table
-    let html = `
-        <div class="room-usage-table-container">
-            <h4>${roomName}</h4>
-            <table class="room-usage-table">
-                <thead>
-                    <tr>
-                        <th class="time-header">Time</th>
-                        ${days.map(day => `<th class="day-header">${day}</th>`).join('')}
-                    </tr>
-                </thead>
-                <tbody>
-    `;
-
-    // Build table rows
-    timeSlots.forEach(timeSlot => {
-        html += `<tr><td class="time-slot">${timeSlot}</td>`;
-        
-        days.forEach(day => {
-            const schedules = scheduleGrid[timeSlot][day];
-            
-            if (schedules.length > 0) {
-                html += `<td class="schedule-cell">`;
-                
-                schedules.forEach((schedule, index) => {
-                    const isVirtual = schedule.RoomName && schedule.RoomName.toLowerCase().includes('virtual');
-                    const colorClass = isVirtual ? "online-schedule" : "f2f-schedule";
-                    
-                    html += `
-                        <div class="schedule-item ${colorClass}">
-                            <div class="subject-code">${schedule.SubjectCode}</div>
-                            <div class="subject-details">
-                                <div class="subject-name">${schedule.SubjectName}</div>
-                                <div class="section-info">${schedule.SectionName}</div>
-                                <div class="program-info">${schedule.ProgramName}</div>
-                                <div class="type-info">${schedule.Type}</div>
-                                <div class="time-info">${schedule.displayTime}</div>
-                            </div>
-                        </div>
-                    `;
-                    
-                    if (index < schedules.length - 1) {
-                        html += `<hr class="schedule-divider">`;
+                for (let slot of timeSlots) {
+                    const [slotStart, slotEnd] = slot.split(' - ');
+                    if (startTime.includes(slotStart.split(':')[0]) ||
+                        endTime.includes(slotEnd.split(':')[0])) {
+                        matchingSlot = slot;
+                        break;
                     }
+                }
+            }
+
+            if (matchingSlot && scheduleGrid[matchingSlot] && scheduleGrid[matchingSlot][item.DayOfWeek]) {
+                scheduleGrid[matchingSlot][item.DayOfWeek].push({
+                    ...item,
+                    displayTime: actualTime
                 });
-                
-                html += `</td>`;
-            } else {
-                html += `<td class="empty-cell"></td>`;
             }
         });
-        
-        html += `</tr>`;
-    });
 
-    html += `
-                </tbody>
-            </table>
-        </div>
-    `;
+        // Build the HTML table
+        let html = `
+            <div class="room-usage-table-container">
+                <h4>${roomName}</h4>
+                <table class="room-usage-table">
+                    <thead>
+                        <tr>
+                            <th class="time-header">Time</th>
+                            ${days.map(day => `<th class="day-header">${day}</th>`).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
 
-    roomUsageContent.innerHTML = html;
-}
+        // Build table rows
+        timeSlots.forEach(timeSlot => {
+            html += `<tr><td class="time-slot">${timeSlot}</td>`;
 
+            days.forEach(day => {
+                const schedules = scheduleGrid[timeSlot][day];
+
+                if (schedules.length > 0) {
+                    html += `<td class="schedule-cell">`;
+
+                    schedules.forEach((schedule, index) => {
+                        const isVirtual = schedule.RoomName && schedule.RoomName.toLowerCase().includes('virtual');
+                        const colorClass = isVirtual ? "online-schedule" : "f2f-schedule";
+
+                        html += `
+                            <div class="schedule-item ${colorClass}">
+                                <div class="subject-code">${schedule.SubjectCode}</div>
+                                <div class="subject-details">
+                                    <div class="subject-name">${schedule.SubjectName}</div>
+                                    <div class="section-info">${schedule.SectionName}</div>
+                                    <div class="program-info">${schedule.ProgramName}</div>
+                                    <div class="type-info">${schedule.Type}</div>
+                                    <div class="time-info">${schedule.displayTime}</div>
+                                </div>
+                            </div>
+                        `;
+
+                        if (index < schedules.length - 1) {
+                            html += `<hr class="schedule-divider">`;
+                        }
+                    });
+
+                    html += `</td>`;
+                } else {
+                    html += `<td class="empty-cell"></td>`;
+                }
+            });
+
+            html += `</tr>`;
+        });
+
+        html += `
+                    </tbody>
+                </table>
+            </div>
+        `;
+
+        roomUsageContent.innerHTML = html;
+    }
 
     // Modal Event Listeners
     roomUsageBtn.addEventListener("click", (e) => {
@@ -590,8 +481,6 @@ document.addEventListener("DOMContentLoaded", () => {
     roomSelect.addEventListener("change", (e) => {
         loadRoomUsage(e.target.value);
     });
-
-
 
     // Event listeners
     programSelect.addEventListener("change", () => {
