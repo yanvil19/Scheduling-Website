@@ -107,8 +107,8 @@ html, body {
     padding: 0;
     border: none;
     border-radius: 8px;
-    width: 90%;
-    max-width: 1200px;
+    width: 100%;
+    max-width: 1500px;
     max-height: 85vh;
     overflow-y: auto;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
