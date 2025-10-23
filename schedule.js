@@ -209,10 +209,35 @@ document.addEventListener("DOMContentLoaded", () => {
     function convertToCSV(scheduleData) {
         const data = [];
 
-        // Add CSV header row
+        // CSV header row
         data.push(['Course Code', 'Course Title', 'Program', 'Section', 'Day', 'Start', 'End', 'Type', 'Room']);
 
-        // Add each schedule entry
+        // Helper to format time to HH:MM:SS (24-hour format)
+        function formatTime(timeStr) {
+            if (!timeStr) return '';
+            // Try parsing common formats like "7:00 AM" or "07:00"
+            const date = new Date(`1970-01-01T${timeStr.replace(/ /g, '')}`);
+            if (!isNaN(date.getTime())) {
+                return date.toTimeString().split(' ')[0]; // "HH:MM:SS"
+            }
+
+            // If AM/PM format
+            const match = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+            if (match) {
+                let [_, h, m, ap] = match;
+                h = parseInt(h, 10);
+                m = parseInt(m, 10);
+                if (ap) {
+                    if (ap.toUpperCase() === 'PM' && h < 12) h += 12;
+                    if (ap.toUpperCase() === 'AM' && h === 12) h = 0;
+                }
+                return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`;
+            }
+
+            return timeStr; // fallback
+        }
+
+        // Add each row
         scheduleData.forEach(schedule => {
             data.push([
                 schedule.SubjectCode || '',
@@ -220,17 +245,17 @@ document.addEventListener("DOMContentLoaded", () => {
                 schedule.ProgramName || '',
                 schedule.SectionName || '',
                 schedule.DayOfWeek || '',
-                schedule.ActualStartTime || schedule.StartTime || '',
-                schedule.ActualEndTime || schedule.EndTime || '',
+                formatTime(schedule.ActualStartTime || schedule.StartTime || ''),
+                formatTime(schedule.ActualEndTime || schedule.EndTime || ''),
                 schedule.Type || '',
                 schedule.RoomName || ''
             ]);
         });
 
+        // Convert to CSV text
         const csvRows = [];
         data.forEach(row => {
             const csvRow = row.map(cell => {
-                // Escape quotes and wrap in quotes if contains comma or quote
                 const escaped = String(cell).replace(/"/g, '""');
                 return escaped.includes(',') || escaped.includes('"') || escaped.includes('\n')
                     ? `"${escaped}"`
@@ -241,6 +266,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         return csvRows.join('\n');
     }
+
 
     function generateFilename(program, year, section) {
         let filename = 'SigmaScheds_Schedule';
