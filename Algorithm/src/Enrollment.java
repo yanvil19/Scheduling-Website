@@ -29,8 +29,8 @@ public class Enrollment {
 
                 System.out.println("\n*** " + program + " ***");
 
-                // Collect inputs (store raw data only)
-                for (int year = YEARS.length - 1; year >= 0; year--) {
+                // Collect inputs (1st year to 4th year)
+                for (int year = 0; year < YEARS.length; year++) {
                     System.out.print("Input " + program + " " + YEARS[year] + " enrollees: ");
                     int enrollees = scanner.nextInt();
 

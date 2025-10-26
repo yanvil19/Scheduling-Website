@@ -38,6 +38,12 @@
             </div>
 
             <div class="lower-right-part">
+                <div class="dropdown-container">
+                    <button id="schedule_plot" class="usage-btn" type="button">
+                        <a href="schedule_viewer.php">Schedule Plotting</a>
+                    </button>
+                </div>                
+
                 <!-- Room Display button -->
                 <div class="dropdown-container">
                     <label class="room-usage-label">&nbsp;</label>
